@@ -1,6 +1,9 @@
 /**
+ * JavaScript code for the "Edit" screen
  *
- *
+ * @package TablePress
+ * @subpackage Views JavaScript
+ * @author Tobias Bäthge
  * @since 1.0.0
  */
 
@@ -65,9 +68,16 @@ jQuery(document).ready( function( $ ) {
 				tp.rows.stripe();
 			},
 			change_datatables: function() {
-				var $datatables_checkbox = $(this),
+				var $datatables_checkbox = $( '#option-use-datatables' ),
 					checkboxes_disabled = ! ( $datatables_checkbox.prop( 'checked' ) && ! $datatables_checkbox.prop( 'disabled' ) );
 				$datatables_checkbox.closest( 'tbody' ).find( 'input' ).not( $datatables_checkbox ).prop( 'disabled', checkboxes_disabled );
+				tp.table.change_datatables_pagination();
+			},
+			change_datatables_pagination: function() {
+				var $pagination_checkbox = $( '#option-datatables-paginate' ),
+					pagination_enabled = ( $pagination_checkbox.prop( 'checked' ) && ! $pagination_checkbox.prop( 'disabled' ) );
+				$( '#option-datatables-lengthchange' ).prop( 'disabled', ! pagination_enabled );
+				$( '#option-datatables-paginate_entries' ).prop( 'disabled', ! pagination_enabled );
 			},
 			prepare_ajax_request: function( wp_action, wp_nonce ) {
 				var $table_body = $( '#edit-form-body' ),
@@ -102,6 +112,9 @@ jQuery(document).ready( function( $ ) {
 					datatables_filter: $( '#option-datatables-filter' ).prop( 'checked' ),
 					datatables_paginate: $( '#option-datatables-paginate' ).prop( 'checked' ),
 					datatables_lengthchange: $( '#option-datatables-lengthchange' ).prop( 'checked' ),
+					datatables_paginate_entries: $( '#option-datatables-paginate_entries' ).val(),
+					datatables_info: $( '#option-datatables-info' ).prop( 'checked' ),
+					datatables_scrollX: $( '#option-datatables-scrollX' ).prop( 'checked' ),
 					datatables_custom_commands: $( '#option-datatables-custom-commands' ).val()
 				};
 				table_options = JSON.stringify( table_options );
@@ -905,9 +918,11 @@ jQuery(document).ready( function( $ ) {
 			},
 			success: function( data ) {
 				// saving was successful, so the original ID has changed to the (maybe) new ID -> we need to adjust all occurances
-				// update URL (for HTML5 browsers only)
-				if ( ( 'pushState' in window.history ) && null !== window.history['pushState'] )
-					window.history.pushState( '', '', window.location.href.replace( /table_id=[0-9a-zA-Z-_]+/gi, 'table_id=' + data.table_id ) );
+				if ( tp.table.id != data.table_id ) {
+					// update URL (for HTML5 browsers only), but only if ID really changed, to not get dummy entries in the browser history
+					if ( ( 'pushState' in window.history ) && null !== window.history['pushState'] )
+						window.history.pushState( '', '', window.location.href.replace( /table_id=[0-9a-zA-Z-_]+/gi, 'table_id=' + data.table_id ) );
+				}
 				// update table ID in input fields (type text and hidden)
 				tp.table.id = tp.table.new_id = data.table_id;
 				$( '#table-id' ).val( tp.table.id );
@@ -991,7 +1006,8 @@ jQuery(document).ready( function( $ ) {
 				'change': {
 					'#option-table-head':		tp.table.change_table_head,
 					'#option-table-foot':		tp.table.change_table_foot,
-					'#option-use-datatables':	tp.table.change_datatables
+					'#option-use-datatables':	tp.table.change_datatables,
+					'#option-datatables-paginate':	tp.table.change_datatables_pagination
 				},
 				'blur': {
 					'#table-new-id':		tp.table.change_id	// onchange would not recognize changed values from tp.check.table_id

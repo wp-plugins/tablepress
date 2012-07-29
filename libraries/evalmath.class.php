@@ -18,11 +18,10 @@ EvalMath - PHP Class to safely evaluate math expressions
 Copyright (C) 2005 Miles Kaufmann <http://www.twmagic.com/>
 
 with modifications by Petr Skoda (skodak) from Moodle - http://moodle.org/
-(this version: https://github.com/moodle/moodle/blob/1e257a3a54d68133bdc02f693a248203a2d2888b/lib/evalmath/evalmath.class.php )
+(this version: https://github.com/moodle/moodle/blob/4efc3d4096bc1d29e9d77f9af7194b2babfa2821/lib/evalmath/evalmath.class.php )
 
 additional modifications by Tobias Bäthge:
 - changed get_string() to MoodleTranslations::get_string(), which is a custom localization from Moodle
-- removed 'round' from $this->fb, as it is in $this->fc and does not work with two parameters otherwise
 
 ================================================================================
 
@@ -623,8 +622,7 @@ class EvalMathFuncs {
 	}
 
 	static function rand_float(){
-		$randomvalue = array_shift(unpack('v', md5(self::get_random_seed(), true)));
-		return $randomvalue / 65536;
+		$randomvalues = unpack('v', md5(self::get_random_seed(), true));
+		return array_shift($randomvalues) / 65536;
 	}
-
 }

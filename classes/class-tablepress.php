@@ -25,7 +25,7 @@ abstract class TablePress {
 	 *
 	 * @const string
 	 */
-	const version = '0.1-alpha';
+	const version = '0.2-alpha';
 
 	/**
 	 * TablePress "data scheme" version
@@ -34,7 +34,7 @@ abstract class TablePress {
 	 *
 	 * @const int
 	 */
-	const db_version = 1;
+	const db_version = 2;
 
 	/**
 	 * Instance of the controller object

@@ -439,7 +439,7 @@ class TablePress_Render {
 			$caption_style = ' style="caption-side:bottom;text-align:left;border:none;background:none;"';
 		}
 		if ( ! empty( $caption ) )
-			$caption = "<caption{$caption_class}{$caption_style}>\n{$caption}</caption>\n";
+			$caption = "<caption{$caption_class}{$caption_style}>{$caption}</caption>\n";
 
 		// <colgroup> tag
 		$colgroup = '';
@@ -619,18 +619,19 @@ class TablePress_Render {
 			'first_column_th' => false,
 			'print_name' => null,
 			'print_description' => null,
-			'cache_table_output' => false,
+			'cache_table_output' => true,
 			'extra_css_classes' => '',
 			'use_datatables' => null,
 			'datatables_sort' => null,
 			'datatables_paginate' => null,
-			'datatables_paginate_entries' => '10',
+			'datatables_paginate_entries' => null,
 			'datatables_lengthchange' => null,
 			'datatables_filter' => null,
-			'datatables_info' => true,
-			'datatables_scrollX' => false,
-			'datatables_tabletools' => false,
+			'datatables_info' => null,
+			'datatables_scrollX' => null,
+			//'datatables_tabletools' => false,
 			'datatables_custom_commands' => null,
+			'datatables_locale' => get_locale(),
 			'show_rows' => '',
 			'show_columns' => '',
 			'hide_rows' => '',
