@@ -45,13 +45,18 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 		add_action( 'wp_print_footer_scripts', array( &$this, 'add_datatables_calls' ), 11 ); // after inclusion of files
 
 		// shortcode "table-info" needs to be declared before "table"! Otherwise it will not be recognized!
-		// add_shortcode( 'table-info', array( &$this, 'shortcode_table_info' ) );
+		add_shortcode( TablePress::$shortcode_info, array( &$this, 'shortcode_table_info' ) );
 		add_shortcode( TablePress::$shortcode, array( &$this, 'shortcode_table' ) );
-		// make Shortcodes work in text widgets
-		// add_filter( 'widget_text', array( &$this, 'widget_text_filter' ) );
+		// make TablePress Shortcodes work in text widgets
+		add_filter( 'widget_text', array( &$this, 'widget_text_filter' ) );
+
+		// extend WordPress Search to also find posts/pages that have a table with the one of the search terms in them
+		// if ( $this->options['enable_search'] )
+			add_filter( 'posts_search', array( &$this, 'posts_search_filter' ) );
+
 
 		// load Template Tag functions
-		//require_once ( TABLEPRESS_ABSPATH . 'libraries/template-tag-functions.php' );
+		require_once ( TABLEPRESS_ABSPATH . 'controllers/template-tag-functions.php' );
 	}
 
 	/**
@@ -85,6 +90,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 		if ( $use_custom_css_from_option ) {
 			// get "Custom CSS" from options
 			$custom_css = trim( $this->model_options->get( 'custom_css' ) );
+			$custom_css = apply_filters( 'tablepress_custom_css', $custom_css );
 			if ( ! empty( $custom_css ) )
 				wp_add_inline_style( 'tablepress-default', $custom_css ); // handle of the file to which the <style> shall be appended
 		}
@@ -330,6 +336,212 @@ JS;
 		}
 
 		return $output;
+	}
+
+	/**
+	 * Handle Shortcode [table-info id=<ID> field=<name> /] in the_content()
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param array $atts list of attributes that where included in the Shortcode
+	 * @return string Text that replaces the Shortcode (error message or asked-for information)
+	 */
+	public function shortcode_table_info( $shortcode_atts ) {
+		// parse Shortcode attributes, only allow those that are specified
+		$default_shortcode_atts = array(
+				'id' => 0,
+				'field' => '',
+				'format' => ''
+		);
+		$default_shortcode_atts = apply_filters( 'tablepress_shortcode_table_info_default_shortcode_atts', $default_shortcode_atts );
+		$shortcode_atts = shortcode_atts( $default_shortcode_atts, $shortcode_atts );
+		$shortcode_atts = apply_filters( 'tablepress_shortcode_table_info_shortcode_atts', $shortcode_atts );
+
+		// allow a filter to determine behavior of this function, by overwriting its behavior, just need to return something other than false
+		$overwrite = apply_filters( 'tablepress_shortcode_table_info_overwrite', false, $shortcode_atts );
+		if ( $overwrite )
+			return $overwrite;
+
+		// check, if a table with the given ID exists
+		$table_id = $shortcode_atts['id'];
+		if ( ! $this->model_table->table_exists( $table_id ) ) {
+			$message = "[table &quot;{$table_id}&quot; not found /]<br />\n";
+			$message = apply_filters( 'tablepress_table_not_found_message', $message, $table_id );
+			return $message;
+		}
+
+		// load the table
+		$table = $this->model_table->load( $table_id );
+		if ( false === $table ) {
+			$message = "[table &quot;{$table_id}&quot; could not be loaded /]<br />\n";
+			$message = apply_filters( 'tablepress_table_load_error_message', $message, $table_id );
+			return $message;
+		}
+
+		$field = $shortcode_atts['field'];
+		$format = $shortcode_atts['format'];
+
+		// generate output, depending on what information (field) was asked for
+		switch ( $field ) {
+			case 'name':
+			case 'description':
+				$output = $table[ $field ];
+				break;
+			case 'last_modified':
+				switch ( $format ) {
+					case 'raw':
+						$output = $table['last_modified'];
+						break 2;
+					case 'mysql':
+						$output = TablePress::format_datetime( $table['last_modified'], 'mysql', ' ' );
+						break 2;
+					case 'human':
+						$modified_timestamp = strtotime( $table['last_modified'] );
+						$current_timestamp = current_time( 'timestamp' );
+						$time_diff = $current_timestamp - $modified_timestamp;
+						if ( $time_diff >= 0 && $time_diff < 24*60*60 ) // time difference is only shown up to one day
+							$output = sprintf( __( '%s ago', 'default' ), human_time_diff( $modified_timestamp, $current_timestamp ) );
+						else
+							$output = TablePress::format_datetime( $table['last_modified'], 'mysql', '<br />' );
+						break 2;
+					default:
+						$output = TablePress::format_datetime( $table['last_modified'], 'mysql', ' ' );
+				}
+				break;
+			case 'last_editor':
+				$output = TablePress::get_user_display_name( $table['options']['last_editor'] );
+				break;
+			case 'author':
+				$output = TablePress::get_user_display_name( $table['author'] );
+				break;
+			default:
+					$output = "[table-info field &quot;{$field}&quot; not found in table &quot;{$table_id}&quot; /]<br />\n";
+					$output = apply_filters( 'tablepress_table_info_not_found_message', $output, $table, $field, $format );
+		}
+
+		$output = apply_filters( 'tablepress_shortcode_table_info_output', $output, $table, $shortcode_atts );
+		return $output;
+	}
+
+	/**
+	 * Handle Shortcodes in text widgets, by temporarily removing all Shortcodes, registering only the plugin's two,
+	 * running WP's Shortcode routines, and then restoring old behavior/Shortcodes
+	 *
+	 * @since 1.0.0
+	 * @uses $shortcode_tags global variable
+	 *
+	 * @param string $content Text content of the text widget, will be searched for one of TablePress's Shortcodes
+	 * @return string Text of the text widget, with eventually found Shortcodes having been replaced by corresponding output
+	 */
+	public function widget_text_filter( $content ) {
+		global $shortcode_tags;
+		// backup the currently registered Shortcodes and clear the global array
+		$orig_shortcode_tags = $shortcode_tags;
+		$shortcode_tags = array();
+		// register TablePress's Shortcodes (which are then the only ones registered)
+		add_shortcode( TablePress::$shortcode_info, array( &$this, 'shortcode_table_info' ) );
+		add_shortcode( TablePress::$shortcode, array( &$this, 'shortcode_table' ) );
+		// do the WP Shortcode routines on the widget text (i.e. search for TablePress's Shortcodes)
+		$content = do_shortcode( $content );
+		// restore the original Shortcodes (which includes TablePress's Shortcodes, for use in posts and pages)
+		$shortcode_tags = $orig_shortcode_tags;
+		return $content;
+	}
+
+	/**
+	 * Expand WP Search to also find posts and pages that have a search term in a table that is shown in them
+	 *
+	 * This is done by looping through all search terms and TablePress tables and searching there for the search term,
+	 * saving all tables's IDs that have a search term and then expanding the WP query to search for posts or pages that have the
+	 * Shortcode for one of these tables in their content.
+	 *
+	 * @since 1.0.0
+	 * @uses $wpdb
+	 *
+	 * @param string $search Current part of the "WHERE" clause of the SQL statement used to get posts/pages from the WP database that is related to searching
+	 * @return string Eventually extended SQL "WHERE" clause, to also find posts/pages with Shortcodes in them
+	 */
+	function posts_search_filter( $search_sql ) {
+		if ( ! is_search() )
+			return $search_sql;
+
+		global $wpdb;
+
+		// get variable that contains all search terms, parsed from $_GET['s'] by WP
+		$search_terms = get_query_var( 'search_terms' );
+		if ( empty( $search_terms ) || ! is_array( $search_terms ) )
+			return $search_sql;
+
+		// load all tables, and remove hidden cells, as those will not be searched
+		// do this here once, so that we don't have to do it in each loop for each search term again
+		$search_tables = array();
+		$tables = $this->model_table->load_all();
+		foreach ( $tables as $table_id => $table ) {
+			// load information about hidden rows and columns
+			$hidden_rows = array_keys( $table['visibility']['rows'], 0 ); // get indexes of hidden rows (array value of 0))
+			$hidden_columns = array_keys( $table['visibility']['columns'], 0 ); // get indexes of hidden columns (array value of 0))
+			// remove hidden rows and re-index
+			foreach ( $hidden_rows as $row_idx ) {
+				if ( isset( $table['data'][$row_idx] ) )
+					unset( $table['data'][$row_idx] );
+			}
+			$table['data'] = array_merge( $table['data'] );
+			// remove hidden columns and re-index
+			foreach ( $table['data'] as $row_idx => $row ) {
+				foreach ( $hidden_columns as $col_idx ) {
+					if ( isset( $row[$col_idx] ) )
+						unset( $row[$col_idx] );
+				}
+				$table['data'][$row_idx] = array_merge( $row );
+			}
+
+			// @TODO: Cells are not evaluated here, so math formulas are searched
+
+			// add name and description to searched items, if they are displayed with the table
+			$table_name = ( 'no' != $table['options']['print_name'] ) ? $table['name'] : '';
+			$table_description = ( 'no' != $table['options']['print_description'] ) ? $table['description'] : '';
+
+			$search_tables[ $table_id ] = array(
+				'data' => $table['data'],
+				'name' => $table_name,
+				'description' => $table_description
+			);
+		}
+
+		// for all search terms loop through all tables's cells (those cells are all visible, because we filtered before!)
+		$query_result = array(); // array of all search words that were found, and the table IDs where they were found
+		foreach ( $search_terms as $search_term ) {
+			$search_term = addslashes_gpc( $search_term ); // escapes with esc_sql
+			foreach ( $search_tables as $table_id => $table ) {
+				if ( false !== stripos( $table['name'], $search_term ) || false !== stripos( $table['description'], $search_term ) ) {
+					// we found the $search_term in the name or description (and they are shown)
+					$query_result[ $search_term ][] = $table_id; // add table ID to result list
+					continue; // don't need to search through this table any further, continue with next table
+				}
+				foreach ( $table['data'] as $table_row ) {
+					foreach ( $table_row as $table_cell ) {
+						if ( false !== stripos( $table_cell, $search_term ) ){
+							// we found the $search_term in the cell
+							$query_result[ $search_term ][] = $table_id; // add table ID to result list
+							break 2; // don't need to search through this table any further, "2" means that we leave both foreach loops
+						}
+					}
+				}
+			}
+		}
+
+		// for all found table IDs for each search term, add additional OR statement to the SQL "WHERE" clause
+		$exact = get_query_var( 'exact' ); // if $_GET['exact'] is set, WordPress doesn't use % in SQL LIKE clauses
+		$n = ( empty( $exact ) ) ? '%' : '';
+		foreach ( $query_result as $search_term => $tables ) {
+			$old_or = "OR ({$wpdb->posts}.post_content LIKE '{$n}{$search_term}{$n}')";
+			$table_ids = implode( '|', $tables );
+			$regexp = '\\\\[table id=(["\\\']?)(' . $table_ids . ')(["\\\' /])'; // ' needs to be single escaped, [ double escaped (with \\) in mySQL
+			$new_or = $old_or . " OR ({$wpdb->posts}.post_content REGEXP '{$regexp}')";
+			$search_sql = str_replace( $old_or, $new_or, $search_sql );
+		}
+
+		return $search_sql;
 	}
 
 } // class TablePress_Frontend_Controller

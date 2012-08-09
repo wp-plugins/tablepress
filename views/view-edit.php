@@ -53,8 +53,8 @@ class TablePress_Edit_View extends TablePress_View {
 		$this->admin_page->enqueue_style( 'edit' );
 		$this->admin_page->enqueue_script( 'edit', array( 'jquery', 'jquery-ui-sortable', 'json2' ), array(
 			'options' => array(
-				'cells_advanced_editor' => true,
-				'cells_auto_grow' => true,
+				'cells_advanced_editor' => apply_filters( 'tablepress_edit_cells_advanced_editor', true ),
+				'cells_auto_grow' => apply_filters( 'tablepress_edit_cells_auto_grow', true ),
 				'shortcode' => TablePress::$shortcode
 			),
 			'strings' => array_merge( array(
@@ -284,8 +284,8 @@ class TablePress_Edit_View extends TablePress_View {
 		</td>
 		<td>
 			<?php _e( 'Combine cells', 'tablepress' ); ?>:&nbsp;
-			<input type="button" class="button-secondary" id="span-add-rowspan" value="<?php _e( 'rowspan', 'tablepress' ); ?>" />
-			<input type="button" class="button-secondary" id="span-add-colspan" value="<?php _e( 'colspan', 'tablepress' ); ?>" />
+			<input type="button" class="button-secondary" id="span-add-rowspan" value="<?php _e( 'in a column (rowspan)', 'tablepress' ); ?>" />
+			<input type="button" class="button-secondary" id="span-add-colspan" value="<?php _e( 'in a row (colspan)', 'tablepress' ); ?>" />
 			<input type="button" class="button-secondary show-help-box" value="<?php _e( '?', 'tablepress' ); ?>" title="<?php _e( 'Help on combining cells' ); ?>" />
 			<div class="hidden-container hidden-help-box-container"><?php
 				echo '<p>' . __( 'Table cells can span across more than one column or row.', 'tablepress' ) . '</p>';

@@ -25,7 +25,7 @@ abstract class TablePress {
 	 *
 	 * @const string
 	 */
-	const version = '0.2-alpha';
+	const version = '0.3-alpha';
 
 	/**
 	 * TablePress "data scheme" version
@@ -34,7 +34,7 @@ abstract class TablePress {
 	 *
 	 * @const int
 	 */
-	const db_version = 2;
+	const db_version = 3;
 
 	/**
 	 * Instance of the controller object
@@ -46,7 +46,7 @@ abstract class TablePress {
 	public static $controller;
 
 	/**
-	 * Name of the Shortcode to show a TablePress
+	 * Name of the Shortcode to show a TablePress table
 	 * Should only be modified through the filter hook 'tablepress_table_shortcode'
 	 *
 	 * @since 1.0.0
@@ -54,6 +54,16 @@ abstract class TablePress {
 	 * @var string
 	 */
 	public static $shortcode = 'table';
+
+	/**
+	 * Name of the Shortcode to show extra information of a TablePress table
+	 * Should only be modified through the filter hook 'tablepress_table_info_shortcode'
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string
+	 */
+	public static $shortcode_info = 'table-info';
 
 	/**
 	 * Start-up TablePress (run on WordPress "init") and load the controller for the current state
@@ -64,8 +74,17 @@ abstract class TablePress {
 	public static function run() {
 		do_action( 'tablepress_run' );
 
+		// exit early if TablePress doesn't have to be loaded
+		if ( ( 'wp-login.php' === basename( $_SERVER['SCRIPT_FILENAME'] ) ) // Login screen
+				|| ( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST )
+				|| ( defined( 'APP_REQUEST' ) && APP_REQUEST )
+				|| ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
+			return;
+		}
+
 		// some filtering of "global" class variables
 		self::$shortcode = apply_filters( 'tablepress_table_shortcode', self::$shortcode );
+		self::$shortcode_info = apply_filters( 'tablepress_table_info_shortcode', self::$shortcode_info );
 
 		if ( is_admin() ) {
 			$controller = 'admin';

@@ -9,16 +9,22 @@
  */
 
 /**
- * Access TablePress through a template tag function
+ * Add template tag function for "table" Shortcode to be used anywhere in the template, returns the table HTML
+ *
+ * This function provides a possibility to show a table anywhere in a WordPress template,
+ * which is needed for any region of a theme that can not use Shortcodes.
  *
  * @since 1.0.0
  *
- * @uses $TablePress_Frontend
- * @param string $query Query string with parameters that are passed to the object
+ * @param string|array $table_query Query string like list or array of parameters for Shortcode "table" rendering
+ * @return string HTML of the rendered table
  */
-function tablepress( $query ) {
-	parse_str( $query, $atts );
-	return TablePress::$instance->get_table( $atts );
+function tablepress_get_table( $table_query ) {
+	if ( is_array( $table_query ) )
+		$atts = $table_query;
+	else
+		parse_str( (string)$table_query, $atts );
+	return TablePress::$controller->shortcode_table( $atts );
 }
 
 /**
@@ -37,22 +43,19 @@ function tablepress_print_table( $table_query ) {
 }
 
 /**
- * Add template tag function for "table" Shortcode to be used anywhere in the template, returns the table HTML
- *
- * This function provides a possibility to show a table anywhere in a WordPress template,
- * which is needed for any region of a theme that can not use Shortcodes.
+ * Add template tag function for "table-info" Shortcode to be used anywhere in the template, returns the info
  *
  * @since 1.0.0
  *
- * @param string|array $table_query Query string like list or array of parameters for Shortcode "table" rendering
- * @return string HTML of the rendered table
+ * @param string|array $table_query Query string like list or array of parameters for Shortcode "table-info" rendering
+ * @return string Desired table information
  */
-function tablepress_get_table( $table_query ) {
+function tablepress_get_table_info( $table_query ) {
 	if ( is_array( $table_query ) )
 		$atts = $table_query;
 	else
-		parse_str( $table_query, $atts );
-	return TablePress::$instance->get_table( $atts );
+		parse_str( (string)$table_query, $atts );
+	return TablePress::$controller->shortcode_table_info( $atts );
 }
 
 /**
@@ -68,20 +71,4 @@ function tablepress_get_table( $table_query ) {
  */
 function tablepress_print_table_info( $table_query ) {
 	echo tablepress_get_table_info( $table_query );
-}
-
-/**
- * Add template tag function for "table-info" Shortcode to be used anywhere in the template, returns the info
- *
- * @since 1.0.0
- *
- * @param string|array $table_query Query string like list or array of parameters for Shortcode "table-info" rendering
- * @return string Desired table information
- */
-function tablepress_get_table_info( $table_query ) {
-	if ( is_array( $table_query ) )
-		$atts = $table_query;
-	else
-		parse_str( $table_query, $atts );
-	return TablePress::$instance->get_table_info( $atts );
 }

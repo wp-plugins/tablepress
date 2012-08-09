@@ -542,8 +542,8 @@ class TablePress_Render {
 				|| ( ( $this->last_row_idx == $row_idx && ! $this->render_options['table_foot'] ) // no rowspan out of table_foot
 					&& ( 1 == $col_idx && ! $this->render_options['first_column_th'] ) ) ) // and no colspan into first column head
 					continue;
-				// invalid span, so we set cell content from #span# to a space
-				$cell_content = '&nbsp;';
+				// invalid span, so we set cell content from #span# to empty
+				$cell_content = '';
 			}
 
 			$span_attr = '';
@@ -558,7 +558,7 @@ class TablePress_Render {
 			}
 
 			$cell_class = apply_filters( 'tablepress_cell_css_class', $cell_class, $this->table['id'], $cell_content, $row_idx + 1, $col_idx + 1, $this->colspan[ $row_idx ], $this->rowspan[ $col_idx ] );
-			$class_attr = ( ! empty( $col_class ) ) ? " class=\"{$col_class}\"" : '';
+			$class_attr = ( ! empty( $cell_class ) ) ? " class=\"{$cell_class}\"" : '';
 			$style_attr = ( ( 0 == $row_idx ) && ! empty( $this->render_options['column_widths'][$col_idx] ) ) ? " style=\"width:{$this->render_options['column_widths'][$col_idx]};\"" : '';
 
 			if ( $this->render_options['first_column_th'] && 0 == $col_idx )
