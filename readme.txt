@@ -11,7 +11,8 @@ TablePress enables you to create and manage tables, without having to write HTML
 
 == Description ==
 
-**ATTENTION: TablePress is absolute ALPHA software right now. Use at your own risk. No support will be provided yet! During this alpha stage, all settings, options, and functionality may change without notice, and without maintaining backwards compatibility! **
+= ATTENTION: =
+**TablePress is absolute ALPHA software right now. Use at your own risk. No support will be provided yet! During this alpha stage, all settings, options, and functionality may change without notice, and without maintaining backwards compatibility!**
 
 TablePress enables you to create and manage tables on your WordPress site. No HTML knowledge is needed, as a comfortable interface allows to easily edit table data. Tables can contain any type of data, even formulas that will be evaluated. An additional JavaScript library can be used to add features like sorting, pagination, filtering, and more for site visitors. You can include the tables into your posts, on your pages, or in text widgets with ease. Tables can be imported and exported from/to CSV files (e.g. from Excel), HTML files, and JSON.
 
