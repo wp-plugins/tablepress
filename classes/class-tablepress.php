@@ -25,7 +25,7 @@ abstract class TablePress {
 	 *
 	 * @const string
 	 */
-	const version = '0.3-alpha';
+	const version = '0.4-alpha';
 
 	/**
 	 * TablePress "data scheme" version
@@ -34,7 +34,7 @@ abstract class TablePress {
 	 *
 	 * @const int
 	 */
-	const db_version = 3;
+	const db_version = 5;
 
 	/**
 	 * Instance of the controller object
@@ -249,8 +249,8 @@ abstract class TablePress {
 	public function number_to_letter( $number ) {
 		$column = '';
 		while ( $number > 0 ) {
-			$column = chr( 65 + ( ( $number-1) % 26 ) ) . $column;
-			$number = floor( ($number-1) / 26 );
+			$column = chr( 65 + ( ( $number-1 ) % 26 ) ) . $column;
+			$number = floor( ( $number-1 ) / 26 );
 		}
 		return $column;
 	}

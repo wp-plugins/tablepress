@@ -48,7 +48,7 @@ class TablePress_Edit_View extends TablePress_View {
 
 		// do this here to get CSS into <head>
 		wp_enqueue_style( 'wp-jquery-ui-dialog' );
-		add_action( 'admin_footer', array( &$this, 'dequeue_media_upload_js'), 2 );
+		add_action( 'admin_footer', array( &$this, 'dequeue_media_upload_js' ), 2 );
 		add_thickbox();
 		$this->admin_page->enqueue_style( 'edit' );
 		$this->admin_page->enqueue_script( 'edit', array( 'jquery', 'jquery-ui-sortable', 'json2' ), array(
@@ -272,7 +272,7 @@ class TablePress_Edit_View extends TablePress_View {
 	 * @since 1.0.0
 	 */
 	public function postbox_table_manipulation( $data, $box ) {
-		$media_library_url = esc_url( add_query_arg( array( 'post_id' => '0', 'type' => 'image', 'tab' => 'library'), admin_url( 'media-upload.php' ) ) );
+		$media_library_url = esc_url( add_query_arg( array( 'post_id' => '0', 'type' => 'image', 'tab' => 'library' ), admin_url( 'media-upload.php' ) ) );
 ?>
 <table class="tablepress-postbox-table fixed hide-if-no-js">
 <tbody>
@@ -438,18 +438,19 @@ class TablePress_Edit_View extends TablePress_View {
 			<option<?php selected( 'below', $options['print_description'] ); ?> value="below"><?php _e( 'Below', 'tablepress' ); ?></option>
 		</select></td>
 	</tr>
-	<tr class="top-border bottom-border">
+	<tr class="top-border">
 		<th class="column-1" scope="row"><label for="option-extra-css-classes"><?php _e( 'Extra CSS Classes', 'tablepress' ); ?>:</label></th>
 		<td class="column-2"><input type="text" id="option-extra-css-classes" class="large-text" name="table[options][extra_css_classes]" value="<?php echo esc_attr( $options['extra_css_classes'] ); ?>" title="<?php _e( 'This field can only contain letters, numbers, spaces, hyphens (-), and underscores (_).', 'tablepress' ); ?>" pattern="[A-Za-z0-9- _]*" /></td>
 	</tr>
-	<tr class="top-border bottom-border">
-		<td colspan="2" style="width: 800px;"><?php echo json_encode( $options ); ?></td>
-	</tr>
-	<tr class="top-border">
-		<td colspan="2"><?php echo json_encode( $data['table']['visibility'] ); ?></td>
-	</tr>
 </tbody>
 </table>
+<?php
+	// @TODO: Remove this Debug cruft once everything works
+	echo '<!--';
+	echo json_encode( $options ) . "\n";
+	echo json_encode( $data['table']['visibility'] ) . "\n";
+	echo '-->';
+?>
 <?php
 	}
 

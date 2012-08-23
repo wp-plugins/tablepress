@@ -50,14 +50,35 @@ class TablePress_List_View extends TablePress_View {
 		if ( $data['messages']['first_visit'] )
 			$this->add_header_message(
 				'<strong><em>Welcome!</em></strong><br />Thank you for using TablePress for the first time!<br />'
-				. $this->ajax_link( array( 'action' => 'hide_message', 'item' => 'first_visit', 'return' => 'list' ) , __( 'Hide', 'tablepress' ) )
+				. $this->ajax_link( array( 'action' => 'hide_message', 'item' => 'first_visit', 'return' => 'list' ) , __( 'Hide this message', 'tablepress' ) )
 			);
 
-		if ( $data['messages']['plugin_update'] )
+		if ( $data['messages']['wp_table_reloaded_warning'] )
 			$this->add_header_message(
-				'<strong><em>Thank you for updating to TablePress ' . TablePress::version . ' (revision ' . TablePress::db_version . ')!</em></strong><br />'
-				. $this->ajax_link( array( 'action' => 'hide_message', 'item' => 'plugin_update', 'return' => 'list' ) , __( 'Hide', 'tablepress' ) )
+				sprintf( __( '<strong><em>Attention!</em></strong><br />You have activated the plugin WP-Table Reloaded, which can not be used together with TablePress.<br />Please follow the <a href="%s" title"Migration Guide from WP-Table Reloaded to TablePress">migration guide</a> and then deactivate WP-Table Reloaded!', 'tablepress' ), 'http://tablepress.org/migration-from-wp-table-reloaded/' ),
+				'error'
 			);
+
+		if ( $data['messages']['donation_message'] )
+			$this->add_header_message(
+				'<img alt="' . __( 'Tobias Bäthge, developer of TablePress', 'tablepress' ) . '" src="https://secure.gravatar.com/avatar/50f1cff2e27a1f522b18ce229c057bc5?s=94" height="94" width="94" style="float:left;margin-right:10px;" />' .
+                __( 'Hi, my name is Tobias, I\'m the developer of the TablePress plugin.', 'tablepress' ) . '<br /><br />' .
+                __( 'Thanks for using it! You\'ve installed TablePress over a month ago.', 'tablepress' ) . ' ' .
+                sprintf( _n( 'If everything works and you are satisfied with the results of managing your %s table, isn\'t that worth a coffee or two?', 'If everything works and you are satisfied with the results of managing your %s tables, isn\'t that worth a coffee or two?', $data['table_count'], 'tablepress' ), $data['table_count'] ) . '<br/>' .
+                sprintf( __( '<a href="%s">Donations</a> help me to continue user support and development of this <em>free</em> software &mdash; things for which I spend countless hours of my free time! Thank you very much!', 'tablepress' ), 'http://tablepress.org/donate/' ) . '<br/><br />' .
+                __( 'Sincerly, Tobias', 'tablepress' ) . '<br /><br />' .
+                sprintf( '<a href="%s" target="_blank"><strong>%s</strong></a>', 'http://tablepress.org/donate/', __( 'Sure, I\'ll buy you a coffee and support TablePress!', 'tablepress' ) ) . '&nbsp;&nbsp;&nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;&nbsp;' .
+				$this->ajax_link( array( 'action' => 'hide_message', 'item' => 'donation_nag', 'return' => 'list' ) , __( 'I already donated.', 'tablepress' ) ) . '&nbsp;&nbsp;&nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;&nbsp;' .
+				$this->ajax_link( array( 'action' => 'hide_message', 'item' => 'donation_nag', 'return' => 'list' ) , __( 'No, thanks. Don\'t ask again.', 'tablepress' ) )
+			);
+
+		if ( $data['messages']['show_plugin_update'] ) {
+			$message = '<strong><em>Thank you for updating to TablePress ' . TablePress::version . ' (revision ' . TablePress::db_version . ')!</em></strong><br />';
+			if ( ! empty( $data['messages']['plugin_update_message'] ) )
+				$message .= $data['messages']['plugin_update_message'] . '<br /><br />';
+			$message .= $this->ajax_link( array( 'action' => 'hide_message', 'item' => 'plugin_update', 'return' => 'list' ) , __( 'Hide this message', 'tablepress' ) );
+			$this->add_header_message( $message );
+		}
 
 		$this->action_messages = array(
 			'success_delete' => _n( 'The table was deleted successfully.', 'The tables were deleted successfully.', 1, 'tablepress' ),
@@ -217,7 +238,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 *
 	 * @since 1.0.0
 	 */
-	public function __construct(){
+	public function __construct() {
 		parent::__construct( array(
 			'singular'	=> 'tablepress-table',		// singular name of the listed records
 			'plural'	=> 'tablepress-all-tables',	// plural name of the listed records
@@ -257,7 +278,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 *
 	 * @return array List of columns in this List Table
 	 */
-	public function get_columns(){
+	public function get_columns() {
 		$columns = array(
 			'cb' => $this->has_items() ? '<input type="checkbox" class="hide-if-no-js" />' : '', // checkbox for "Select all", but only if there are items in the table
 			'table_id' => __( 'ID', 'tablepress' ),
@@ -354,7 +375,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 * @param array $item Data item for the current row
 	 * @return string HTML content of the cell
 	 */
-	protected function column_table_description( $item ){
+	protected function column_table_description( $item ) {
 		if ( '' == trim( $item['description'] ) )
 			$item['description'] = __( '(no description)', 'tablepress' );
 		return esc_html( $item[ 'description' ] );
@@ -368,7 +389,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 * @param array $item Data item for the current row
 	 * @return string HTML content of the cell
 	 */
-	protected function column_table_author( $item ){
+	protected function column_table_author( $item ) {
 		return TablePress::get_user_display_name( $item['author'] );
 	}
 
@@ -380,7 +401,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 * @param array $item Data item for the current row
 	 * @return string HTML content of the cell
 	 */
-	protected function column_table_last_modified( $item ){
+	protected function column_table_last_modified( $item ) {
 		$modified_timestamp = strtotime( $item['last_modified'] );
 		$current_timestamp = current_time( 'timestamp' );
 		$time_diff = $current_timestamp - $modified_timestamp;
@@ -565,7 +586,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 		$total_items = count( $this->items );
 
 		// Slice items array to hold only items for the current page
-		$this->items = array_slice( $this->items, ( ( $current_page-1) * $per_page ), $per_page );
+		$this->items = array_slice( $this->items, ( ( $current_page-1 ) * $per_page ), $per_page );
 
 		// Register pagination options and calculation results
 		$this->set_pagination_args( array(

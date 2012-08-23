@@ -28,7 +28,7 @@ class TablePress_Admin_Page {
 	 * @param string $name Name of the CSS file, without extension(s)
 	 */
 	public function enqueue_style( $name ) {
-		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.dev' : '';
+		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
 		$css_file = "admin/{$name}{$suffix}.css";
 		$css_url = plugins_url( $css_file, TABLEPRESS__FILE__ );
 		wp_enqueue_style( "tablepress-{$name}", $css_url, array(), TablePress::version );
@@ -44,7 +44,7 @@ class TablePress_Admin_Page {
 	 * @param bool|array $localize_script (optional) An array with strings that gets transformed into a JS object and is added to the page before the script is included
 	 */
 	public function enqueue_script( $name, $dependencies = array(), $localize_script = false ) {
-		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.dev' : '';
+		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
 		$js_file = "admin/{$name}{$suffix}.js";
 		$js_url = plugins_url( $js_file, TABLEPRESS__FILE__ );
 		wp_enqueue_script( "tablepress-{$name}", $js_url, $dependencies, TablePress::version, true );
@@ -74,8 +74,8 @@ class TablePress_Admin_Page {
 	 * @return string New admin footer content
 	 */
 	public function _admin_footer_text( $content ) {
-		$content .= ' &bull; ' . __( 'Thank you for using <a href="http://tobias.baethge.com/wordpress/plugins/tablepress/">TablePress</a>.', 'tablepress' );
-		$content .= ' ' . sprintf( __( 'Support the plugin with your <a href="%s">donation</a>!', 'tablepress' ), 'http://tobias.baethge.com/donate-message/' );
+		$content .= ' &bull; ' . __( 'Thank you for using <a href="http://tablepress.org/">TablePress</a>.', 'tablepress' );
+		$content .= ' ' . sprintf( __( 'Support the plugin with your <a href="%s">donation</a>!', 'tablepress' ), 'http://tablepress.org/donate/' );
 		return $content;
 	}
 

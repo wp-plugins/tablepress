@@ -11,7 +11,7 @@
 Plugin Name: TablePress
 Plugin URI: http://tablepress.org/
 Description: TablePress enables you to create and manage tables in your posts and pages, without having to write HTML code, and it adds valuable functions for your visitors.
-Version: 0.3-alpha
+Version: 0.4-alpha
 Author: Tobias Bäthge
 Author URI: http://tobias.baethge.com/
 Author eMail: wordpress@tobias.baethge.com
@@ -46,7 +46,7 @@ define( 'TABLEPRESS__FILE__', __FILE__ );
 define( 'TABLEPRESS_BASENAME', plugin_basename( TABLEPRESS__FILE__ ) );
 
 // Load TablePress class, which holds common functions and variables
-require_once( TABLEPRESS_ABSPATH . 'classes/class-tablepress.php' );
+require_once TABLEPRESS_ABSPATH . 'classes/class-tablepress.php';
 
 // Start up TablePress on WordPress's "init" hook
 add_action( 'init', array( 'TablePress', 'run' ) );

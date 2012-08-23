@@ -19,7 +19,12 @@ TablePress enables you to create and manage tables on your WordPress site. No HT
 = More information =
 Please visit the plugin website at http://tablepress.org/ for more information.
 
+= Supporting future development =
 If you like the TablePress plugin, please rate it here in the WordPress Plugin Directory, support it with your [donation](http://tablepress.org/donate/), or [flattr it](https://flattr.com/thing/783658/TablePress). Thank you!
+
+= Migration from WP-Table Reloaded =
+TablePress is the official successor of the WP-Table Reloaded plugin. It has been written from the ground up and by using an entirely new internal structure fixes some major flaws of WP-Table Reloaded and prepares the plugin for easier, safer, and better future development.
+If you are currently using WP-Table Reloaded, it is recommended that you switch to TablePress. WP-Table Reloaded will no longer be maintained or developed. For further information on how to switch from WP-Table Reloaded to TablePress, please see the [migration guide](http://tablepress.org/migration-from-wp-table-reloaded/) on the plugin website.
 
 == Screenshots ==
 
@@ -53,7 +58,7 @@ For support questions, bug reports, or feature requests, please use the [WordPre
 
 = Requirements? =
 
-In short: WordPress 3.5 or higher, while the latest version of WordPress is always recommended.
+In short: WordPress 3.4.1 or higher, while the latest version of WordPress is always recommended.
 
 = Languages and Localization? =
 
@@ -67,6 +72,10 @@ There is also a .pot-file available to use in the "i18n" subfolder. Of course yo
 
 You can follow the development of TablePress more closely in its official GitHub repository at https://github.com/TobiasBg/TablePress.
 
+= Switch from WP-Table Reloaded to TablePress =
+
+For further information on how to switch from WP-Table Reloaded to TablePress, please see the [migration guide](http://tablepress.org/migration-from-wp-table-reloaded/) on the plugin website.
+
 = Where can I get more information? =
 
 Please visit the [official plugin website](http://tablepress.org/) for the latest information on this plugin.
@@ -79,7 +88,7 @@ Everything should be self-explaining there.
 To show one of your tables in a post, on a page, or in a text widget, just include the Shortcode `[table id=<the-ID> /]` to your post/page/text widget, where `<the-ID>` is the ID of your table (can be found on the left side of the "All Tables" screen.)
 
 After that you might want to change the styling of the table. You can do this by entering CSS commands into the "Custom CSS" textarea on the "Plugin Options" screen.
-You may also add certain features (like sorting, pagination, filtering, alternating row colors, row highlighting, print name and/or description, ...) by checking the appropriate options on the "Edit table" screen.
+You may also add certain features (like sorting, pagination, filtering, alternating row colors, row highlighting, print name and/or description, ...) by checking the appropriate options on a table's "Edit" screen.
 
 == Acknowledgements ==
 
@@ -96,10 +105,10 @@ I'm also happy about [donations](http://tablepress.org/donate/) or something fro
 
 == Changelog ==
 
-= Version 0.3-alpha =
+= Version 1.0 =
 This version is the initial release.
 
 == Upgrade Notice ==
 
-= 0.3-alpha =
+= 1.0 =
 This version is the initial release.

@@ -87,7 +87,7 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 	 */
 	public function add_admin_menu_entry() {
 		// for all menu entries:
-		$min_access_cap = apply_filters( 'tablepress_min_access_cap', 'read' ); // make this a Plugin Option!
+		$min_access_cap = apply_filters( 'tablepress_min_access_cap', 'edit_pages' ); // @TODO: Make this a plugin option for usage here, below, and for the frontend edit link!
 		$callback = array( &$this, 'show_admin_page' );
 
 		if ( $this->is_top_level_page ) {
@@ -196,7 +196,7 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 	 * @return array Current set of registered TinyMCE plugins, including "Table" button plugin
 	 */
 	public function add_tinymce_plugin( $plugins ) {
-		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.dev' : '';
+		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
 		$js_file = "admin/tinymce-button{$suffix}.js";
 		$plugins['tablepress_tinymce'] = plugins_url( $js_file, TABLEPRESS__FILE__ );
 		return $plugins;
@@ -220,35 +220,35 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 		) );
 	}
 
-    /**
-     * Handle actions for loading of Plugins page
-     *
-     * @since 1.0.0
-     */
+	/**
+	 * Handle actions for loading of Plugins page
+	 *
+	 * @since 1.0.0
+	 */
 	public function plugins_page() {
 		$this->init_i18n_support();
 		// add message to list of plugins, if an update is available
 		// add_action( 'in_plugin_update_message-' . TABLEPRESS_BASENAME, array( &$this, 'add_plugin_update_message' ), 10, 2 );
 		// add additional links on Plugins page
-        add_filter( 'plugin_row_meta', array( &$this, 'add_plugin_row_meta' ), 10, 2);
+		add_filter( 'plugin_row_meta', array( &$this, 'add_plugin_row_meta' ), 10, 2);
 	}
 
-    /**
-     * Add links to the TablePress entry on the Plugins page
-     *
-     * @since 1.0.0
-     *
-     * @param array $links List of links to print on the Plugins page
-     * @param string $file Name of the plugin
-     * @return array Extended list of links to print on the Plugins page
-     */
+	/**
+	 * Add links to the TablePress entry on the Plugins page
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param array $links List of links to print on the Plugins page
+	 * @param string $file Name of the plugin
+	 * @return array Extended list of links to print on the Plugins page
+	 */
 	public function add_plugin_row_meta( $links, $file ) {
 		if ( TABLEPRESS_BASENAME == $file ) {
 			$links[] = '<a href="' . TablePress::url() . '" title="' . __( 'TablePress Plugin Page', 'tablepress' ) . '">' . __( 'Plugin Page', 'tablepress' ) . '</a>';
-			$links[] = '<a href="http://tobias.baethge.com/go/tablepress/faq/" title="' . __( 'Frequently Asked Questions', 'tablepress' ) . '">' . __( 'FAQ', 'tablepress' ) . '</a>';
-			$links[] = '<a href="http://tobias.baethge.com/go/tablepress/support/" title="' . __( 'Support', 'tablepress' ) . '">' . __( 'Support', 'tablepress' ) . '</a>';
-			$links[] = '<a href="http://tobias.baethge.com/go/tablepress/documentation/" title="' . __( 'Plugin Documentation', 'tablepress' ) . '">' . __( 'Documentation', 'tablepress' ) . '</a>';
-			$links[] = '<a href="http://tobias.baethge.com/go/tablepress/donate/" title="' . __( 'Support TablePress with your donation!', 'tablepress' ) . '"><strong>' . __( 'Donate', 'tablepress' ) . '</strong></a>';
+			$links[] = '<a href="http://tablepress.org/faq/" title="' . __( 'Frequently Asked Questions', 'tablepress' ) . '">' . __( 'FAQ', 'tablepress' ) . '</a>';
+			$links[] = '<a href="http://tablepress.org/support/" title="' . __( 'Support', 'tablepress' ) . '">' . __( 'Support', 'tablepress' ) . '</a>';
+			$links[] = '<a href="http://tablepress.org/documentation/" title="' . __( 'Plugin Documentation', 'tablepress' ) . '">' . __( 'Documentation', 'tablepress' ) . '</a>';
+			$links[] = '<a href="http://tablepress.org/donate/" title="' . __( 'Support TablePress with your donation!', 'tablepress' ) . '"><strong>' . __( 'Donate', 'tablepress' ) . '</strong></a>';
 		}
 		return $links;
 	}
@@ -290,7 +290,11 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 			case 'list':
 				$data['tables'] = $this->model_table->load_all();
 				$data['messages']['first_visit'] = $this->model_options->get( 'message_first_visit' );
-				$data['messages']['plugin_update'] = $this->model_options->get( 'message_plugin_update' );
+				$data['messages']['wp_table_reloaded_warning'] = is_plugin_active( 'wp-table-reloaded/wp-table-reloaded.php' ); // check if WP-Table Reloaded is activated
+				$data['messages']['show_plugin_update'] = $this->model_options->get( 'message_plugin_update' );
+				$data['messages']['plugin_update_message'] = $this->model_options->get( 'message_plugin_update_content' );
+				$data['messages']['donation_message'] = $this->maybe_show_donation_message();
+				$data['table_count'] = count( $data['tables'] );
 				break;
 			case 'about':
 				$data['plugin_languages'] = $this->get_plugin_languages();
@@ -428,7 +432,24 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 	 * @return array -1, 0, 1, depending on sort
 	 */
 	protected function _get_plugin_languages_sort_cb( $a, $b ) {
-	    return strnatcasecmp( $a['name'], $b['name'] );
+		return strnatcasecmp( $a['name'], $b['name'] );
+	}
+
+	/**
+	 * Decide whether a donate message shall be shown on the "All Tables" screen, depending on passed days since installation and whether it was shown before
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return bool Whether the donate message shall be shown on the "All Tables" screen
+	 */
+	protected function maybe_show_donation_message() {
+		if ( ! $this->model_options->get( 'message_donation_nag' ) )
+			return false;
+
+		// How long has the plugin been installed?
+		$secs = time() - $this->model_options->get( 'first_activation' );
+		$days = floor( $secs / ( 60*60*24 ) );
+		return ( $days >= 30 ) ? true : false;
 	}
 
 	/**
@@ -443,49 +464,49 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 				'page_title' => __( 'All Tables', 'tablepress' ),
 				'admin_menu_title' => __( 'All Tables', 'tablepress' ),
 				'nav_tab_title' => __( 'All Tables', 'tablepress' ),
-				'min_access_cap' => 'read'
+				'min_access_cap' => 'edit_pages'
 			),
 			'add' => array(
 				'show_entry' => true,
 				'page_title' => __( 'Add New Table', 'tablepress' ),
 				'admin_menu_title' => __( 'Add New Table', 'tablepress' ),
 				'nav_tab_title' => __( 'Add New', 'tablepress' ),
-				'min_access_cap' => 'read'
+				'min_access_cap' => 'edit_pages'
 			),
 			'edit' => array(
 				'show_entry' => false,
 				'page_title' => __( 'Edit Table', 'tablepress' ),
 				'admin_menu_title' => '',
 				'nav_tab_title' => '',
-				'min_access_cap' => 'read'
+				'min_access_cap' => 'edit_pages'
 			),
 			'import' => array(
 				'show_entry' => true,
 				'page_title' => __( 'Import a Table', 'tablepress' ),
 				'admin_menu_title' => __( 'Import a Table', 'tablepress' ),
 				'nav_tab_title' => __( 'Import', 'tablepress' ),
-				'min_access_cap' => 'read'
+				'min_access_cap' => 'edit_pages'
 			),
 			'export' => array(
 				'show_entry' => true,
 				'page_title' => __( 'Export a Table', 'tablepress' ),
 				'admin_menu_title' => __( 'Export a Table', 'tablepress' ),
 				'nav_tab_title' => __( 'Export', 'tablepress' ),
-				'min_access_cap' => 'read'
+				'min_access_cap' => 'edit_pages'
 			),
 			'options' => array(
 				'show_entry' => true,
 				'page_title' => __( 'Plugin Options', 'tablepress' ),
 				'admin_menu_title' => __( 'Plugin Options', 'tablepress' ),
 				'nav_tab_title' => __( 'Plugin Options', 'tablepress' ),
-				'min_access_cap' => 'read'
+				'min_access_cap' => 'edit_pages'
 			),
 			'about' => array(
 				'show_entry' => true,
 				'page_title' => __( 'About', 'tablepress' ),
 				'admin_menu_title' => __( 'About TablePress', 'tablepress' ),
 				'nav_tab_title' => __( 'About', 'tablepress' ),
-				'min_access_cap' => 'read'
+				'min_access_cap' => 'edit_pages'
 			)
 		);
 
@@ -604,7 +625,7 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 		// Evaluate options that have a checkbox (only necessary in Admin Controller, where they might not be set (if unchecked))
 		$checkbox_options = array(
 			'table_head', 'table_foot', 'alternating_row_colors', 'row_hover',	// Table Options
-			'use_datatables', 'datatables_sort', 'datatables_filter', 'datatables_paginate', 'datatables_lengthchange', 'datatables_info', 'datatables_scrollX'	// DataTables JS Features @TODO: THIS NEEDS WORK (e.g. for disabled fields)!
+			'use_datatables', 'datatables_sort', 'datatables_filter', 'datatables_paginate', 'datatables_lengthchange', 'datatables_info', 'datatables_scrollX' // DataTables JS Features @TODO: THIS NEEDS WORK (e.g. for disabled fields)!
 		);
 		foreach ( $checkbox_options as $option ) {
 			$edit_table['options'][$option] = ( isset( $edit_table['options'][$option] ) && 'true' === $edit_table['options'][$option] );
@@ -1066,7 +1087,10 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 		$message_item = ! empty( $_GET['item'] ) ? $_GET['item'] : '';
 		TablePress::check_nonce( 'hide_message', $message_item );
 
-		$this->model_options->update( "message_{$message_item}", false );
+		$updated_options = array( "message_{$message_item}" => false );
+		if ( 'plugin_update' == $message_item )
+			$updated_options['message_plugin_update_content'] = '';
+		$this->model_options->update( $updated_options );
 
 		$return = ! empty( $_GET['return'] ) ? $_GET['return'] : 'list';
 		TablePress::redirect( array( 'action' => $return ) );

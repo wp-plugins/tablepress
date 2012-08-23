@@ -44,19 +44,35 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 		// add DataTables invocation calls
 		add_action( 'wp_print_footer_scripts', array( &$this, 'add_datatables_calls' ), 11 ); // after inclusion of files
 
-		// shortcode "table-info" needs to be declared before "table"! Otherwise it will not be recognized!
-		add_shortcode( TablePress::$shortcode_info, array( &$this, 'shortcode_table_info' ) );
-		add_shortcode( TablePress::$shortcode, array( &$this, 'shortcode_table' ) );
+		// Remove WP-Table Reloaded Shortcodes and add TablePress Shortcodes
+		add_action( 'init', array( &$this, 'init_shortcodes' ), 20 ); // run on priority 20 as WP-Table Reloaded Shortcodes are registered at priority 10
+
 		// make TablePress Shortcodes work in text widgets
 		add_filter( 'widget_text', array( &$this, 'widget_text_filter' ) );
 
-		// extend WordPress Search to also find posts/pages that have a table with the one of the search terms in them
-		// if ( $this->options['enable_search'] )
+		// extend WordPress Search to also find posts/pages that have a table with the one of the search terms in title (if shown), description (if shown), or content
+		if ( apply_filters( 'tablepress_wp_search_integration', true ) )
 			add_filter( 'posts_search', array( &$this, 'posts_search_filter' ) );
 
-
 		// load Template Tag functions
-		require_once ( TABLEPRESS_ABSPATH . 'controllers/template-tag-functions.php' );
+		require_once TABLEPRESS_ABSPATH . 'controllers/template-tag-functions.php';
+	}
+
+	/**
+	 * Register TablePress Shortcodes, after removing WP-Table Reloaded Shortcodes
+	 *
+	 * @since 1.0.0
+	 */
+	public function init_shortcodes() {
+		// if WP-Table Reloaded is activated, remove it's Shortcodes, as these would otherwise be used instead of TablePress's Shortcodes
+		include_once ABSPATH . 'wp-admin/includes/plugin.php';
+		if ( is_plugin_active( 'wp-table-reloaded/wp-table-reloaded.php' ) ) {
+			remove_shortcode( 'table-info' );
+			remove_shortcode( 'table' );
+		}
+		// Shortcode "table-info" needs to be declared before "table"! Otherwise it will not be recognized!
+		add_shortcode( TablePress::$shortcode_info, array( &$this, 'shortcode_table_info' ) );
+		add_shortcode( TablePress::$shortcode, array( &$this, 'shortcode_table' ) );
 	}
 
 	/**
@@ -66,7 +82,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 	 */
 	public function enqueue_css() {
 		// @TODO: Add check for whether default CSS is desired at all
-		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.dev' : '';
+		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
 		$default_css_url = plugins_url( "css/default{$suffix}.css", TABLEPRESS__FILE__ );
 		$default_css_url = apply_filters( 'tablepress_default_css_url', $default_css_url );
 		wp_enqueue_style( 'tablepress-default', $default_css_url, array(), TablePress::version );
@@ -126,7 +142,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 		foreach ( $this->shown_tables as $table_id => $table_store ) {
 			if ( empty( $table_store['instances'] ) )
 				continue;
-			foreach( $table_store['instances'] as $html_id => $js_options ) {
+			foreach ( $table_store['instances'] as $html_id => $js_options ) {
 				$parameters = array();
 
 				// DataTables language/translation handling
@@ -261,7 +277,7 @@ JS;
 		$this->shown_tables[$table_id]['count']++;
 		$count = $this->shown_tables[$table_id]['count'];
 		$render_options['html_id'] = "tablepress-{$table_id}";
-		if( $count > 1 )
+		if ( $count > 1 )
 			$render_options['html_id'] .= "-no-{$count}";
 		$render_options['html_id'] = apply_filters( 'tablepress_html_id', $render_options['html_id'], $table_id, $count );
 
@@ -289,7 +305,7 @@ JS;
 		// generate "Edit Table" link
 		$render_options['edit_table_url'] = '';
 		/*
-		if ( is_user_logged_in() && $this->model_options->get( 'frontend_edit_table_link' ) {
+		if ( is_user_logged_in() && apply_filters( 'tablepress_edit_link_below_table', true ) ) {
 			$user_group = $this->model_options->get( 'user_access_plugin' );
 			$capabilities = array(
 				'admin' => 'manage_options',
@@ -305,7 +321,7 @@ JS;
 		}
 		*/
 		// @TODO: temporary for above:
-		if ( is_user_logged_in() )
+		if ( is_user_logged_in() && apply_filters( 'tablepress_edit_link_below_table', true ) && current_user_can( apply_filters( 'tablepress_min_access_cap', 'edit_pages' ) ) )
 			$render_options['edit_table_url'] = TablePress::url( array( 'action' => 'edit', 'table_id' => $table['id'] ) );
 
 		$render_options = apply_filters( 'tablepress_table_render_options', $render_options, $table );
@@ -520,7 +536,7 @@ JS;
 				}
 				foreach ( $table['data'] as $table_row ) {
 					foreach ( $table_row as $table_cell ) {
-						if ( false !== stripos( $table_cell, $search_term ) ){
+						if ( false !== stripos( $table_cell, $search_term ) ) {
 							// we found the $search_term in the cell
 							$query_result[ $search_term ][] = $table_id; // add table ID to result list
 							break 2; // don't need to search through this table any further, "2" means that we leave both foreach loops
