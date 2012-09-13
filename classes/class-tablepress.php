@@ -21,20 +21,36 @@ abstract class TablePress {
 	/**
 	 * TablePress version
 	 *
+	 * Increases whenever a new plugin version is released
+	 *
 	 * @since 1.0.0
 	 *
 	 * @const string
 	 */
-	const version = '0.4-alpha';
+	const version = '0.5-alpha';
 
 	/**
-	 * TablePress "data scheme" version
+	 * TablePress internal plugin version ("options scheme" version)
+	 *
+	 * Increases whenever the scheme for the plugin options changes, or on a plugin update
 	 *
 	 * @since 1.0.0
 	 *
 	 * @const int
 	 */
-	const db_version = 5;
+	const db_version = 8;
+
+	/**
+	 * TablePress "table scheme" (data format structure) version
+	 *
+	 * Increases whenever the scheme for a $table changes,
+	 * used to be able to update plugin options and table scheme independently
+	 *
+	 * @since 1.0.0
+	 *
+	 * @const int
+	 */
+	const table_scheme_version = 1;
 
 	/**
 	 * Instance of the controller object
@@ -77,7 +93,6 @@ abstract class TablePress {
 		// exit early if TablePress doesn't have to be loaded
 		if ( ( 'wp-login.php' === basename( $_SERVER['SCRIPT_FILENAME'] ) ) // Login screen
 				|| ( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST )
-				|| ( defined( 'APP_REQUEST' ) && APP_REQUEST )
 				|| ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
 			return;
 		}

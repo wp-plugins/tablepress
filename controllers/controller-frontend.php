@@ -38,7 +38,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 		parent::__construct();
 
 		// enqueue CSS files
-		// if ( $this->options['use_default_css'] || $this->options['use_custom_css'] )
+		if ( $this->model_options->get( 'use_default_css' ) || $this->model_options->get( 'use_custom_css' ) )
 			add_action( 'wp_enqueue_scripts', array( &$this, 'enqueue_css' ) );
 
 		// add DataTables invocation calls
@@ -81,34 +81,44 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 	 * @since 1.0.0
 	 */
 	public function enqueue_css() {
-		// @TODO: Add check for whether default CSS is desired at all
-		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
-		$default_css_url = plugins_url( "css/default{$suffix}.css", TABLEPRESS__FILE__ );
-		$default_css_url = apply_filters( 'tablepress_default_css_url', $default_css_url );
-		wp_enqueue_style( 'tablepress-default', $default_css_url, array(), TablePress::version );
-
-		// @TODO: Add check for whether "Custom CSS" is desired at all
-		$use_custom_css_from_option = true;
-		if ( $this->model_options->get( 'use_custom_css_file' ) ) {
-			// fall back to "Custom CSS" in options, if it could not be retrieved from file
-			$custom_css_file_contents = $this->model_options->load_custom_css_from_file();
-			if ( ! empty( $custom_css_file_contents ) ) {
-				$use_custom_css_from_option = false;
-				$custom_css_url = content_url( 'tablepress-custom.css' );
-				$custom_css_url = apply_filters( 'tablepress_custom_css_url', $custom_css_url );
-				$custom_css_dependencies = array( 'tablepress-default' ); // if default CSS is desired, but also handled internally
-				$custom_css_version = $this->model_options->get( 'custom_css_version' );
-				$custom_css_version = apply_filters( 'tablepress_custom_css_version', $custom_css_version );
-				wp_enqueue_style( 'tablepress-custom', $custom_css_url, $custom_css_dependencies, $custom_css_version );
-			}
+		// add "Default CSS"
+		if ( $this->model_options->get( 'use_default_css' ) ) {
+			$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
+			$default_css_url = plugins_url( "css/default{$suffix}.css", TABLEPRESS__FILE__ );
+			$default_css_url = apply_filters( 'tablepress_default_css_url', $default_css_url );
+			wp_enqueue_style( 'tablepress-default', $default_css_url, array(), TablePress::version );
 		}
 
-		if ( $use_custom_css_from_option ) {
-			// get "Custom CSS" from options
-			$custom_css = trim( $this->model_options->get( 'custom_css' ) );
-			$custom_css = apply_filters( 'tablepress_custom_css', $custom_css );
-			if ( ! empty( $custom_css ) )
-				wp_add_inline_style( 'tablepress-default', $custom_css ); // handle of the file to which the <style> shall be appended
+		// add "Custom CSS"
+		if ( $this->model_options->get( 'use_custom_css' ) ) {
+			$print_custom_css_inline = true; // will be overwritten if file is used
+			if ( $this->model_options->get( 'use_custom_css_file' ) ) {
+				// fall back to "Custom CSS" in options, if it could not be retrieved from file
+				$custom_css_file_contents = $this->model_options->load_custom_css_from_file();
+				if ( ! empty( $custom_css_file_contents ) ) {
+					$print_custom_css_inline = false;
+					$custom_css_url = content_url( 'tablepress-custom.css' );
+					$custom_css_url = apply_filters( 'tablepress_custom_css_url', $custom_css_url );
+					$custom_css_dependencies = array();
+					if ( $this->model_options->get( 'use_default_css' ) )
+						$custom_css_dependencies[] = 'tablepress-default'; // if default CSS is desired, but also handled internally
+					$custom_css_version = apply_filters( 'tablepress_custom_css_version', $this->model_options->get( 'custom_css_version' ) );
+					wp_enqueue_style( 'tablepress-custom', $custom_css_url, $custom_css_dependencies, $custom_css_version );
+				}
+			}
+
+			if ( $print_custom_css_inline ) {
+				// get "Custom CSS" from options
+				$custom_css = trim( $this->model_options->get( 'custom_css' ) );
+				$custom_css = apply_filters( 'tablepress_custom_css', $custom_css );
+				if ( ! empty( $custom_css ) ) {
+					// wp_add_inline_style() requires a loaded CSS file, so we have to work around that if "Default CSS" is disabled
+					if ( $this->model_options->get( 'use_default_css' ) )
+						wp_add_inline_style( 'tablepress-default', $custom_css ); // handle of the file to which the <style> shall be appended
+					else
+						add_action( 'wp_head', create_function( '$a', 'echo "<style type=\'text/css\'>\n' . $custom_css . '\n</style>\n";' ), 8 ); // priority 8 to hook in right after WP_Styles has been processed
+				}
+			}
 		}
 	}
 
@@ -117,7 +127,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 	 *
 	 * @since 1.0.0
 	 */
-	public function enqueue_datatables() {
+	protected function _enqueue_datatables() {
 		$js_file = 'js/jquery.datatables.min.js';
 		$js_url = plugins_url( $js_file, TABLEPRESS__FILE__ );
 		$js_url = apply_filters( 'tablepress_datatables_js_url', $js_url, $js_file );
@@ -299,7 +309,7 @@ JS;
 			);
 			$js_options = apply_filters( 'tablepress_table_js_options', $js_options, $table_id, $render_options );
 			$this->shown_tables[$table_id]['instances'][ $render_options['html_id'] ] = $js_options;
-			$this->enqueue_datatables();
+			$this->_enqueue_datatables();
 		}
 
 		// generate "Edit Table" link
@@ -477,7 +487,7 @@ JS;
 	 * @param string $search Current part of the "WHERE" clause of the SQL statement used to get posts/pages from the WP database that is related to searching
 	 * @return string Eventually extended SQL "WHERE" clause, to also find posts/pages with Shortcodes in them
 	 */
-	function posts_search_filter( $search_sql ) {
+	public function posts_search_filter( $search_sql ) {
 		if ( ! is_search() )
 			return $search_sql;
 
@@ -498,15 +508,13 @@ JS;
 			$hidden_columns = array_keys( $table['visibility']['columns'], 0 ); // get indexes of hidden columns (array value of 0))
 			// remove hidden rows and re-index
 			foreach ( $hidden_rows as $row_idx ) {
-				if ( isset( $table['data'][$row_idx] ) )
-					unset( $table['data'][$row_idx] );
+				unset( $table['data'][$row_idx] );
 			}
 			$table['data'] = array_merge( $table['data'] );
 			// remove hidden columns and re-index
 			foreach ( $table['data'] as $row_idx => $row ) {
 				foreach ( $hidden_columns as $col_idx ) {
-					if ( isset( $row[$col_idx] ) )
-						unset( $row[$col_idx] );
+					unset( $row[$col_idx] );
 				}
 				$table['data'][$row_idx] = array_merge( $row );
 			}

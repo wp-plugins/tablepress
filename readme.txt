@@ -2,7 +2,7 @@
 Contributors: TobiasBg
 Donate link: http://tablepress.org/donate/
 Tags: html,table,data,editor,csv,excel,import,export
-Requires at least: 3.4.1
+Requires at least: 3.4.2
 Tested up to: 3.5
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -58,7 +58,7 @@ For support questions, bug reports, or feature requests, please use the [WordPre
 
 = Requirements? =
 
-In short: WordPress 3.4.1 or higher, while the latest version of WordPress is always recommended.
+In short: WordPress 3.4.2 or higher, while the latest version of WordPress is always recommended.
 
 = Languages and Localization? =
 
@@ -101,7 +101,7 @@ Thanks to every donor, supporter and bug reporter!
 This plugin is Free Software, released under the GPL, version 2 (http://www.gnu.org/licenses/gpl-2.0.html).
 You may use it free of charge for any purpose.
 I kindly ask you for link somewhere on your website to http://tablepress.org/. This is not required!
-I'm also happy about [donations](http://tablepress.org/donate/) or something from [my wishlist](http://tobias.baethge.com/wishlist/)! Thanks!
+I'm also happy about [donations](http://tablepress.org/donate/) or something from [my wishlist](http://tablepress.org/wishlist/)! Thanks!
 
 == Changelog ==
 

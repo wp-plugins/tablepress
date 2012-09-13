@@ -40,8 +40,15 @@ jQuery(document).ready( function( $ ) {
 				$( '#tablepress_edit-table-information, #tablepress_edit-table-options, #tablepress_edit-datatables-features' ).one( 'change', 'input, textarea, select', tp.table.set_table_changed );
 			},
 			change_id: function( /* event */ ) {
+				// empty table IDs are not allowed
 				if ( '' === $.trim( $( '#table-new-id' ).val() ) ) {
 					alert( tablepress_strings.table_id_not_empty );
+					$( '#table-new-id' ).val( tp.table.new_id ).focus().select();
+					return;
+				}
+				// the '0' table ID is not allowed
+				if ( '0' === $.trim( $( '#table-new-id' ).val() ) ) {
+					alert( tablepress_strings.table_id_not_zero );
 					$( '#table-new-id' ).val( tp.table.new_id ).focus().select();
 					return;
 				}
@@ -362,7 +369,7 @@ jQuery(document).ready( function( $ ) {
 						// first try and sort Hex codes or Dates
 						if (yD) {
 							if ( xD < yD ) return -1;
-							else if ( xD > yD )	return 1;
+							else if ( xD > yD ) return 1;
 						}
 						// natural sorting through split numeric strings and default strings
 						for(var cLoc=0, numS=Math.max(xN.length, yN.length); cLoc < numS; cLoc++) {
@@ -986,8 +993,8 @@ jQuery(document).ready( function( $ ) {
 					'#image-add':			tp.content.image.add,
 					'#span-add-rowspan':	function() { tp.content.span.add( '#rowspan#' ); },
 					'#span-add-colspan':	function() { tp.content.span.add( '#colspan#' ); },
-					'.show-preview-button':	tp.table.preview.trigger,
-					'.save-changes-button':	tp.save_changes.trigger,
+					'.show-preview-button': tp.table.preview.trigger,
+					'.save-changes-button': tp.save_changes.trigger,
 					'.show-help-box':		function() {
 						$(this).next().wpdialog( {
 						title: $(this).attr( 'title' ),

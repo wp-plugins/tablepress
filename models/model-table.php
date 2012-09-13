@@ -167,7 +167,7 @@ class TablePress_Table_Model extends TablePress_Model {
 			return false;
 
 		$post_id = $this->_get_post_id( $table_id );
-		if ( 0 === $post_id )
+		if ( false === $post_id )
 			return false;
 
 		$post = $this->model_post->get( $post_id );
@@ -194,6 +194,7 @@ class TablePress_Table_Model extends TablePress_Model {
 			return array();
 
 		$table_ids = array_keys( $table_post );
+		$table_ids = array_map( 'strval', $table_ids ); // convert table IDs to strings
 		$post_ids = array_values( $table_post );
 
 		// load all table posts with one query, to prime the cache
@@ -212,14 +213,14 @@ class TablePress_Table_Model extends TablePress_Model {
 	 * @since 1.0.0
 	 *
 	 * @param array $table Table (needs to have $table['id']!)
-	 * @return mixed False on error, int table ID on success
+	 * @return mixed False on error, string table ID on success
 	 */
 	public function save( $table ) {
 		if ( empty( $table['id'] ) )
 			return false;
 
 		$post_id = $this->_get_post_id( $table['id'] );
-		if ( 0 === $post_id )
+		if ( false === $post_id )
 			return false;
 
 		$post = $this->_table_to_post( $table, $post_id );
@@ -250,7 +251,7 @@ class TablePress_Table_Model extends TablePress_Model {
 	 * @since 1.0.0
 	 *
 	 * @param array $table Table ($table['id'] is not necessary)
-	 * @return mixed False on error, int table ID of the new table on success
+	 * @return mixed False on error, string table ID of the new table on success
 	 */
 	public function add( $table ) {
 		$post_id = false; // to insert table
@@ -280,7 +281,7 @@ class TablePress_Table_Model extends TablePress_Model {
 	 * @since 1.0.0
 	 *
 	 * @param string $table_id ID of the table to be copied
-	 * @return mixed False on error, int table ID of the new table on success
+	 * @return mixed False on error, string table ID of the new table on success
 	 */
 	public function copy( $table_id ) {
 		$table = $this->load( $table_id );
@@ -313,7 +314,7 @@ class TablePress_Table_Model extends TablePress_Model {
 		if ( ! $this->table_exists( $table_id ) )
 			return false;
 
-		$post_id = $this->_get_post_id( $table_id );
+		$post_id = $this->_get_post_id( $table_id ); // no !false check necessary, as this is covered by table_exists() check above
 		$deleted = $this->model_post->delete( $post_id ); // Post Meta fields will be deleted automatically by that function
 
 		if ( false === $deleted )
@@ -382,14 +383,14 @@ class TablePress_Table_Model extends TablePress_Model {
 	 * @since 1.0.0
 	 *
 	 * @param string $table_id Table ID
-	 * @return int Post ID on success, int 0 on error
+	 * @return int Post ID on success, false on error
 	 */
 	protected function _get_post_id( $table_id ) {
-		$post_id = 0;
 		$table_post = $this->tables->get( 'table_post' );
 		if ( isset( $table_post[ $table_id ] ) )
-			$post_id = $table_post[ $table_id ];
-		return $post_id;
+			return $table_post[ $table_id ];
+		else
+			return false;
 	}
 
 	/**
@@ -402,9 +403,7 @@ class TablePress_Table_Model extends TablePress_Model {
 	 */
 	protected function _update_post_id( $table_id, $post_id ) {
 		$tables = $this->tables->get();
-
 		$tables['table_post'][ $table_id ] = $post_id;
-
 		uksort( $tables['table_post'], 'strnatcasecmp' );
 		$this->tables->update( $tables );
 	}
@@ -418,10 +417,7 @@ class TablePress_Table_Model extends TablePress_Model {
 	 */
 	protected function _remove_post_id( $table_id ) {
 		$tables = $this->tables->get();
-
-		if ( isset( $tables['table_post'][ $table_id ] ) )
-			unset( $tables['table_post'][ $table_id ] );
-
+		unset( $tables['table_post'][ $table_id ] );
 		$this->tables->update( $tables );
 	}
 
@@ -430,17 +426,17 @@ class TablePress_Table_Model extends TablePress_Model {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param int $old_id Old table ID
-	 * @param int $new_id New table ID
+	 * @param string $old_id Old table ID
+	 * @param string $new_id New table ID
 	 * @return bool True on success, false on error
 	 */
 	public function change_table_id( $old_id, $new_id ) {
 		$post_id = $this->_get_post_id( $old_id );
-		if ( 0 === $post_id )
+		if ( false === $post_id )
 			return false;
 
-		// Check new ID for correct format (letters, numbers, -, and _ only)
-		if ( 0 !== preg_match( '/[^a-zA-Z0-9_-]/', $new_id ) )
+		// Check new ID for correct format (string from letters, numbers, -, and _ only, except the '0' string)
+		if ( empty( $new_id ) || 0 !== preg_match( '/[^a-zA-Z0-9_-]/', $new_id ) )
 			return false;
 
 		if ( $this->table_exists( $new_id ) )
@@ -503,8 +499,7 @@ class TablePress_Table_Model extends TablePress_Model {
 				'datatables_info' => true,
 				'datatables_scrollX' => true,
 				'datatables_custom_commands' => ''
-				//'datatables_tabletools' => false,
-				//'cache_table_output' => true???
+				//'datatables_tabletools' => false
 			),
 			'visibility' => array(
 				'rows' => array( 1 ), // one visbile row
@@ -601,18 +596,21 @@ class TablePress_Table_Model extends TablePress_Model {
 		$table['last_modified'] = current_time( 'mysql' );
 		$table['options']['last_editor'] = get_current_user_id();
 		// Table Options
-		if ( isset( $new_table['options'] ) ) {
-			// specials check for certain options -> need to be unset, so that they are not merged in the next step
-			if ( isset( $new_table['options']['extra_css_classes'] ) ) {
-				$table['options']['extra_css_classes'] = preg_replace( '/[^a-zA-Z0-9_ -]/', '', $new_table['options']['extra_css_classes'] );
-				unset( $new_table['options']['extra_css_classes'] );
+		if ( isset( $new_table['options'] ) ) { // is for example not set for newly added tables
+			// specials check for certain options
+			if ( isset( $new_table['options']['extra_css_classes'] ) )
+				$new_table['options']['extra_css_classes'] = preg_replace( '/[^a-zA-Z0-9_ -]/', '', $new_table['options']['extra_css_classes'] );
+			if ( isset( $new_table['options']['datatables_paginate_entries'] ) ) {
+				$new_table['options']['datatables_paginate_entries'] = intval( $new_table['options']['datatables_paginate_entries'] );
+				if ( $new_table['options']['datatables_paginate_entries'] < 1 )
+					$new_table['options']['datatables_paginate_entries'] = 10; // default value
 			}
-			// merge remaining new options
+			// merge new options
 			$table['options'] = array_merge( $table['options'], $new_table['options'] );
 		}
 		// Table Visibility
-		$table['visibility']['rows'] = array_map( 'intval', $new_table['visibility']['rows'] );
-		$table['visibility']['columns'] = array_map( 'intval', $new_table['visibility']['columns'] );
+		$table['visibility']['rows'] = $new_table['visibility']['rows'];
+		$table['visibility']['columns'] = $new_table['visibility']['columns'];
 
 		return $table;
 	}
@@ -715,7 +713,7 @@ class TablePress_Table_Model extends TablePress_Model {
 
 	/**
 	 * Merge existing Table Options with default Table Options,
-	 * remove (no longer) existing options, e.g. after a plugin update,
+	 * remove (no longer) existing options, after a table scheme change,
 	 * for all tables
 	 *
 	 * @since 1.0.0

@@ -30,6 +30,15 @@ class TablePress_List_View extends TablePress_View {
 	protected $wp_list_table;
 
 	/**
+	 * List of WP feature pointers for this view
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var array
+	 */
+	// protected $wp_pointers = array( 'tp100_navbar' ); // @TODO: Temporarily disabled
+
+	/**
 	 * Set up the view with data and do things that are specific for this view
 	 *
 	 * @since 1.0.0
@@ -55,25 +64,28 @@ class TablePress_List_View extends TablePress_View {
 
 		if ( $data['messages']['wp_table_reloaded_warning'] )
 			$this->add_header_message(
-				sprintf( __( '<strong><em>Attention!</em></strong><br />You have activated the plugin WP-Table Reloaded, which can not be used together with TablePress.<br />Please follow the <a href="%s" title"Migration Guide from WP-Table Reloaded to TablePress">migration guide</a> and then deactivate WP-Table Reloaded!', 'tablepress' ), 'http://tablepress.org/migration-from-wp-table-reloaded/' ),
+				'<strong><em>' . __( 'Attention!', 'tablepress' ) . '</em></strong><br />'
+				. __( 'You have activated the plugin WP-Table Reloaded, which can not be used together with TablePress.', 'tablepress' ) . '<br />'
+				. sprintf( __( 'Please follow the <a href="%s" title"Migration Guide from WP-Table Reloaded to TablePress">migration guide</a> and then deactivate WP-Table Reloaded!', 'tablepress' ), 'http://tablepress.org/migration-from-wp-table-reloaded/' ) . '<br />'
+				. '<a href="' . TablePress::url( array( 'action' => 'import' ) ) . '" class="button button-primary" title="' . __( 'Import your tables from WP-Table Reloaded', 'tablepress' ) . '" style="color:#ffffff;margin-top:5px;">' . __( 'Import your tables from WP-Table Reloaded', 'tablepress' ) . '</a>',
 				'error'
 			);
 
 		if ( $data['messages']['donation_message'] )
 			$this->add_header_message(
 				'<img alt="' . __( 'Tobias Bäthge, developer of TablePress', 'tablepress' ) . '" src="https://secure.gravatar.com/avatar/50f1cff2e27a1f522b18ce229c057bc5?s=94" height="94" width="94" style="float:left;margin-right:10px;" />' .
-                __( 'Hi, my name is Tobias, I\'m the developer of the TablePress plugin.', 'tablepress' ) . '<br /><br />' .
-                __( 'Thanks for using it! You\'ve installed TablePress over a month ago.', 'tablepress' ) . ' ' .
-                sprintf( _n( 'If everything works and you are satisfied with the results of managing your %s table, isn\'t that worth a coffee or two?', 'If everything works and you are satisfied with the results of managing your %s tables, isn\'t that worth a coffee or two?', $data['table_count'], 'tablepress' ), $data['table_count'] ) . '<br/>' .
-                sprintf( __( '<a href="%s">Donations</a> help me to continue user support and development of this <em>free</em> software &mdash; things for which I spend countless hours of my free time! Thank you very much!', 'tablepress' ), 'http://tablepress.org/donate/' ) . '<br/><br />' .
-                __( 'Sincerly, Tobias', 'tablepress' ) . '<br /><br />' .
-                sprintf( '<a href="%s" target="_blank"><strong>%s</strong></a>', 'http://tablepress.org/donate/', __( 'Sure, I\'ll buy you a coffee and support TablePress!', 'tablepress' ) ) . '&nbsp;&nbsp;&nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;&nbsp;' .
+				__( 'Hi, my name is Tobias, I\'m the developer of the TablePress plugin.', 'tablepress' ) . '<br /><br />' .
+				__( 'Thanks for using it! You\'ve installed TablePress over a month ago.', 'tablepress' ) . ' ' .
+				sprintf( _n( 'If everything works and you are satisfied with the results of managing your %s table, isn\'t that worth a coffee or two?', 'If everything works and you are satisfied with the results of managing your %s tables, isn\'t that worth a coffee or two?', $data['table_count'], 'tablepress' ), $data['table_count'] ) . '<br/>' .
+				sprintf( __( '<a href="%s">Donations</a> help me to continue user support and development of this <em>free</em> software &mdash; things for which I spend countless hours of my free time! Thank you very much!', 'tablepress' ), 'http://tablepress.org/donate/' ) . '<br/><br />' .
+				__( 'Sincerly, Tobias', 'tablepress' ) . '<br /><br />' .
+				sprintf( '<a href="%s" target="_blank"><strong>%s</strong></a>', 'http://tablepress.org/donate/', __( 'Sure, I\'ll buy you a coffee and support TablePress!', 'tablepress' ) ) . '&nbsp;&nbsp;&nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;&nbsp;' .
 				$this->ajax_link( array( 'action' => 'hide_message', 'item' => 'donation_nag', 'return' => 'list' ) , __( 'I already donated.', 'tablepress' ) ) . '&nbsp;&nbsp;&nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;&nbsp;' .
 				$this->ajax_link( array( 'action' => 'hide_message', 'item' => 'donation_nag', 'return' => 'list' ) , __( 'No, thanks. Don\'t ask again.', 'tablepress' ) )
 			);
 
 		if ( $data['messages']['show_plugin_update'] ) {
-			$message = '<strong><em>Thank you for updating to TablePress ' . TablePress::version . ' (revision ' . TablePress::db_version . ')!</em></strong><br />';
+			$message = '<strong><em>Thank you for updating to TablePress ' . TablePress::version . '!</em></strong><br />';
 			if ( ! empty( $data['messages']['plugin_update_message'] ) )
 				$message .= $data['messages']['plugin_update_message'] . '<br /><br />';
 			$message .= $this->ajax_link( array( 'action' => 'hide_message', 'item' => 'plugin_update', 'return' => 'list' ) , __( 'Hide this message', 'tablepress' ) );
@@ -211,6 +223,21 @@ class TablePress_List_View extends TablePress_View {
 		return 'Help for the List Tables screen';
 	}
 
+	/**
+	 * Set the content for the WP feature pointer about the TablePress nav bar
+	 *
+	 * @since 1.0.0
+	 */
+	public function wp_pointer_tp100_navbar() {
+		$content  = '<h3>' . __( 'TablePress Feature: Navigation', 'tablepress' ) . '</h3>';
+		$content .= '<p>' .	 __( 'Add a new table to get started!', 'tablepress' ) . '</p>';
+
+		$this->admin_page->print_wp_pointer_js( 'tp100_navbar', '#tablepress-nav', array(
+			'content'  => $content,
+			'position' => array( 'edge' => 'top', 'align' => 'left', 'offset' => '250 0' ),
+		) );
+	}
+
 } // class TablePress_List_View
 
 /**
@@ -241,7 +268,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	public function __construct() {
 		parent::__construct( array(
 			'singular'	=> 'tablepress-table',		// singular name of the listed records
-			'plural'	=> 'tablepress-all-tables',	// plural name of the listed records
+			'plural'	=> 'tablepress-all-tables', // plural name of the listed records
 			'ajax'		=> false					// does this list table support AJAX?
 		) );
 	}
@@ -460,7 +487,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 			echo "\t<option value='$name'$>$title</option>\n";
 		}
 		echo "</select>\n";
-		echo '<input type="submit" name="" id="doaction' . $two . '" class="button-secondary action" value="' . __( 'Apply', 'tablepress' ) . '" />' . "\n";
+		echo '<input type="submit" name="" id="doaction' . $two . '" class="button action" value="' . __( 'Apply', 'tablepress' ) . '" />' . "\n";
 	}
 
 	/**
@@ -592,7 +619,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 		$this->set_pagination_args( array(
 			'total_items' => $total_items,					// total number of records/items
 			'per_page' => $per_page,						// number of items per page
-			'total_pages' => ceil( $total_items/$per_page )	// total number of pages
+			'total_pages' => ceil( $total_items/$per_page ) // total number of pages
 		) );
 	}
 
