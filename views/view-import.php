@@ -21,6 +21,15 @@ defined( 'ABSPATH' ) || die( 'No direct script access allowed!' );
 class TablePress_Import_View extends TablePress_View {
 
 	/**
+	 * List of WP feature pointers for this view
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var array
+	 */
+	protected $wp_pointers = array( 'tp100_wp_table_reloaded_import' );
+
+	/**
 	 * Set up the view with data and do things that are specific for this view
 	 *
 	 * @since 1.0.0
@@ -44,8 +53,7 @@ class TablePress_Import_View extends TablePress_View {
 
 		$this->add_text_box( 'head', array( &$this, 'textbox_head' ), 'normal' );
 		$this->add_meta_box( 'import-form', __( 'Import Tables', 'tablepress' ), array( &$this, 'postbox_import_form' ), 'normal' );
-		if ( $data['wp_table_reloaded_installed'] )
-			$this->add_meta_box( 'import-wp-table-reloaded', __( 'Import from WP-Table Reloaded', 'tablepress' ), array( &$this, 'postbox_wp_table_reloaded_import' ), 'additional' );
+		$this->add_meta_box( 'import-wp-table-reloaded', __( 'Import from WP-Table Reloaded', 'tablepress' ), array( &$this, 'postbox_wp_table_reloaded_import' ), 'additional' );
 	}
 
 	/**
@@ -174,7 +182,24 @@ class TablePress_Import_View extends TablePress_View {
 <p><?php _e( 'Import from WP-Table Reloaded', 'tablepress' ); ?></p>
 <table class="tablepress-postbox-table fixed">
 <tbody>
-	<tr class="no-border">
+	<tr id="row-import-wp-table-reloaded-source">
+		<th class="column-1" scope="row"><?php _e( 'Import Source', 'tablepress' ); ?>:</th>
+		<td class="column-2">
+			<input name="import[wp_table_reloaded][source]" id="import-wp-table-reloaded-source-db" type="radio" value="db"<?php checked( $data['import_wp_table_reloaded_source'], 'db', true ); disabled( $data['wp_table_reloaded_installed'], false, true ); ?> /> <label for="import-wp-table-reloaded-source-db"><?php _e( 'WordPress database', 'tablepress' ); ?></label>
+			<input name="import[wp_table_reloaded][source]" id="import-wp-table-reloaded-source-dump-file" type="radio" value="dump-file" disabled="disabled"<?php checked( $data['import_wp_table_reloaded_source'], 'dump-file', true ); ?> /> <label for="import-wp-table-reloaded-source-dump-file"><?php _e( 'WP-Table Reloaded Dump File', 'tablepress' ); ?></label>
+		</td>
+	</tr>
+	<tr id="row-import-wp-table-reloaded-source-dump-file" class="bottom-border">
+		<th class="column-1 top-align" scope="row"><label for="tables-import-wp-table-reloaded-dump-file"><?php _e( 'Select file', 'tablepress' ); ?>:</label></th>
+		<td class="column-2">
+			<input name="import_wp_table_reloaded_file_upload" id="tables-import-wp-table-reloaded-dump-file" type="file" class="large-text" style="box-sizing: border-box;" />
+		</td>
+	</tr>
+	<tr id="row-import-wp-table-reloaded-source-db" class="bottom-border">
+		<th class="column-1 top-align" scope="row" style="padding:2px;"></th>
+		<td class="column-2" style="padding:2px;"></td>
+	</tr>
+	<tr class="top-border">
 		<th class="column-1" scope="row"><?php _e( 'Tables', 'tablepress' ); ?>:</th>
 		<td class="column-2"><label for="import-wp-table-reloaded-tables"> <input type="checkbox" id="import-wp-table-reloaded-tables" name="import[wp_table_reloaded][tables]" value="true" checked="checked" /> <?php _e( 'Import all tables and their settings from WP-Table Reloaded.', 'tablepress' ); ?> <?php _e( '<span class="description">(recommended)</span>', 'tablepress' ); ?></label></td>
 	</tr>
@@ -198,6 +223,21 @@ class TablePress_Import_View extends TablePress_View {
 	 */
 	protected function help_tab_content() {
 		return 'Help for the Import Table screen';
+	}
+
+	/**
+	 * Set the content for the WP feature pointer about the WP-Table Reloaded import feature
+	 *
+	 * @since 1.0.0
+	 */
+	public function wp_pointer_tp100_wp_table_reloaded_import() {
+		$content  = '<h3>' . __( 'TablePress Feature: Import from WP-Table Reloaded', 'tablepress' ) . '</h3>';
+		$content .= '<p>' .	 __( 'You can import your existing tables and "Custom CSS" from WP-Table Reloaded into TablePress.', 'tablepress' ) . '</p>';
+
+		$this->admin_page->print_wp_pointer_js( 'tp100_wp_table_reloaded_import', '#tablepress_import-import-wp-table-reloaded', array(
+			'content'  => $content,
+			'position' => array( 'edge' => 'bottom', 'align' => 'left', 'offset' => '16 -16' ),
+		) );
 	}
 
 } // class TablePress_Import_View
