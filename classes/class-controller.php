@@ -45,7 +45,7 @@ abstract class TablePress_Controller {
 	 *
 	 * @var string
 	 */
-	public $parent_page = 'bottom';
+	public $parent_page = 'middle';
 
 	/**
 	 * Whether TablePress admin screens are a top-level menu item in the admin menu
@@ -109,6 +109,11 @@ abstract class TablePress_Controller {
 		// Maybe update the table scheme in each existing table, independently from updating the plugin options
 		if ( $this->model_options->get( 'table_scheme_db_version' ) < TablePress::table_scheme_version ) {
 			$this->model_table->merge_table_options_defaults();
+
+			// Merge print_name/print_description changes made for 0.6-beta, @TODO: Remove in 1.0
+			if ( $this->model_options->get( 'table_scheme_db_version' ) < 2 )
+				$this->model_table->merge_table_options_tp06();
+
 			$this->model_options->update( array(
 				'table_scheme_db_version' => TablePress::table_scheme_version
 			) );

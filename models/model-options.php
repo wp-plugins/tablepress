@@ -52,7 +52,7 @@ class TablePress_Options_Model extends TablePress_Model {
 	 */
 	protected $default_user_options = array(
 		'user_options_db_version' => TablePress::db_version, // to prevent saving on first load
-		'admin_menu_parent_page' => 'bottom',
+		'admin_menu_parent_page' => 'middle',
 		'plugin_language' => 'auto',
 		'message_first_visit' => true
 	);
@@ -249,7 +249,7 @@ class TablePress_Options_Model extends TablePress_Model {
 	 */
 	public function save_custom_css_to_file() {
 		// Set current screen to get Screen Icon to have a custom HTML ID, so that we can hide it with CSS
-		set_current_screen( "tablepress_options_invisible" );
+		set_current_screen( 'tablepress_options_invisible' );
 
 		// Start capturing the output, to get HTML of the credentials form (if needed)
 		ob_start();
@@ -260,7 +260,7 @@ class TablePress_Options_Model extends TablePress_Model {
 		if ( false === $credentials ) {
 			$form_data = ob_get_contents();
 			ob_end_clean();
-			$form_data = str_replace( 'name="upgrade" id="upgrade" class="button"', 'name="upgrade" id="upgrade" class="button button-primary"', $form_data );
+			$form_data = str_replace( 'name="upgrade" id="upgrade" class="button"', 'name="upgrade" id="upgrade" class="button button-primary button-large"', $form_data );
 			return $form_data;
 		}
 
@@ -270,7 +270,7 @@ class TablePress_Options_Model extends TablePress_Model {
 			request_filesystem_credentials( $url, '', true, false, null );
 			$form_data = ob_get_contents();
 			ob_end_clean();
-			$form_data = str_replace( 'name="upgrade" id="upgrade" class="button"', 'name="upgrade" id="upgrade" class="button button-primary"', $form_data );
+			$form_data = str_replace( 'name="upgrade" id="upgrade" class="button"', 'name="upgrade" id="upgrade" class="button button-primary button-large"', $form_data );
 			return $form_data;
 		}
 

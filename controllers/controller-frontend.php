@@ -116,10 +116,21 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 					if ( $this->model_options->get( 'use_default_css' ) )
 						wp_add_inline_style( 'tablepress-default', $custom_css ); // handle of the file to which the <style> shall be appended
 					else
-						add_action( 'wp_head', create_function( '$a', 'echo "<style type=\'text/css\'>\n' . $custom_css . '\n</style>\n";' ), 8 ); // priority 8 to hook in right after WP_Styles has been processed
+						add_action( 'wp_head', array( &$this, '_print_custom_css' ), 8 ); // priority 8 to hook in right after WP_Styles has been processed
 				}
 			}
 		}
+	}
+
+	/**
+	 * Print "Custom CSS" to "wp_head" inline; Necessary if "Default CSS" is off, and saving "Custom CSS" to a file is not possible
+	 *
+	 * @since 1.0.0
+	 */
+	public function _print_custom_css() {
+		$custom_css = trim( $this->model_options->get( 'custom_css' ) );
+		$custom_css = apply_filters( 'tablepress_custom_css', $custom_css );
+		echo "<style type='text/css'>\n{$custom_css}\n</style>\n";
 	}
 
 	/**
@@ -522,8 +533,8 @@ JS;
 			// @TODO: Cells are not evaluated here, so math formulas are searched
 
 			// add name and description to searched items, if they are displayed with the table
-			$table_name = ( 'no' != $table['options']['print_name'] ) ? $table['name'] : '';
-			$table_description = ( 'no' != $table['options']['print_description'] ) ? $table['description'] : '';
+			$table_name = ( $table['options']['print_name'] ) ? $table['name'] : '';
+			$table_description = ( $table['options']['print_description'] ) ? $table['description'] : '';
 
 			$search_tables[ $table_id ] = array(
 				'data' => $table['data'],

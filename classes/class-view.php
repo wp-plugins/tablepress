@@ -150,7 +150,7 @@ abstract class TablePress_View {
 		$this->data = $data;
 
 		// Set page <title>
-		$GLOBALS['title'] = sprintf( __( '%s &lsaquo; TablePress', 'tablepress' ), $this->data['view_actions'][ $this->action ]['page_title'] );
+		$GLOBALS['title'] = sprintf( __( '%1$s &lsaquo; %2$s', 'tablepress' ), $this->data['view_actions'][ $this->action ]['page_title'], 'TablePress' );
 
 		// admin page helpers, like script/style loading, could be moved to view
 		$this->admin_page = TablePress::load_class( 'TablePress_Admin_Page', 'class-admin-page-helper.php', 'classes' );
@@ -165,6 +165,7 @@ abstract class TablePress_View {
 				'ays_delete_multiple_tables' => _n( 'Do you really want to delete this table?', 'Do you really want to delete these tables?', 2, 'tablepress' )
 			)
 		) );
+
 		$this->admin_page->add_admin_footer_text();
 
 		// Initialize WP feature pointers for TablePress
@@ -396,23 +397,8 @@ abstract class TablePress_View {
 	protected function textbox_submit_button( $data, $box ) {
 		$caption = isset( $data['submit_button_caption'] ) ? $data['submit_button_caption'] : __( 'Save Changes', 'tablepress' );
 		?>
-		<p class="submit"><input type="submit" value="<?php echo esc_attr( $caption ); ?>" class="button button-primary" name="submit" /></p>
+		<p class="submit"><input type="submit" value="<?php echo esc_attr( $caption ); ?>" class="button button-primary button-large" name="submit" /></p>
 		<?php
-	}
-
-	/**
-	 * Create HTML code for an AJAXified link
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param array $params Parameters for the URL
-	 * @param string $text Text for the link
-	 * @return string HTML code for the link
-	 */
-	protected function ajax_link( $params = array( 'action' => 'list', 'item' => '' ), $text ) {
-		$url = TablePress::url( $params, true, 'admin-post.php' );
-		$action = esc_attr( $params['action'] );
-		return "<a class=\"ajax-link {$action}\" href=\"{$url}\">{$text}</a>";
 	}
 
 	/**

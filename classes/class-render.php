@@ -367,7 +367,7 @@ class TablePress_Render {
 		$num_rows = count( $this->table['data'] );
 		$num_columns = ( $num_rows > 0 ) ? count( $this->table['data'][0] ) : 0;
 
-		// check if there are rows and columns in the table (might not be the case after removing to hidden rows/columns!)
+		// check if there are rows and columns in the table (might not be the case after removing hidden rows/columns!)
 		if ( 0 === $num_rows || 0 === $num_columns ) {
 			$this->output = sprintf( __( '<!-- The table with the ID %s is empty! -->', 'tablepress' ), $this->table['id'] ); // @TODO: Maybe use a more meaningful output here?
 			return;
@@ -387,20 +387,20 @@ class TablePress_Render {
 
 		$output = '';
 
-		if ( 'no' != $this->render_options['print_name'] ) {
+		if ( $this->render_options['print_name'] ) {
 			$print_name_html_tag = apply_filters( 'tablepress_print_name_html_tag', 'h2', $this->table['id'] );
 			$print_name_css_class = apply_filters( 'tablepress_print_name_css_class', "tablepress-table-name tablepress-table-name-id-{$this->table['id']}", $this->table['id'] );
 			$print_name_html = "<{$print_name_html_tag} class=\"{$print_name_css_class}\">" . $this->safe_output( $this->table['name'] ) . "</{$print_name_html_tag}>\n";
 		}
-		if ( 'no' != $this->render_options['print_description'] ) {
+		if ( $this->render_options['print_description'] ) {
 			$print_description_html_tag = apply_filters( 'tablepress_print_description_html_tag', 'span', $this->table['id'] );
 			$print_description_css_class = apply_filters( 'tablepress_print_description_css_class', "tablepress-table-description tablepress-table-description-id-{$this->table['id']}", $this->table['id'] );
 			$print_description_html = "<{$print_description_html_tag} class=\"{$print_description_css_class}\">" . $this->safe_output( $this->table['description'] ) . "</{$print_description_html_tag}>\n";
 		}
 
-		if ( 'above' == $this->render_options['print_name'] )
+		if ( $this->render_options['print_name'] && 'above' == $this->render_options['print_name_position'] )
 			$output .= $print_name_html;
-		if ( 'above' == $this->render_options['print_description'] )
+		if ( $this->render_options['print_description'] && 'above' == $this->render_options['print_description_position'] )
 			$output .= $print_description_html;
 
 		$thead = '';
@@ -434,7 +434,7 @@ class TablePress_Render {
 			if ( ! empty( $caption ) )
 				$caption .= '<br />';
 			$caption .= "<a href=\"{$this->render_options['edit_table_url']}\" title=\"" . __( 'Edit', 'default' ) . "\">" . __( 'Edit', 'default' ) . "</a>";
-			$caption_style = ' style="caption-side:bottom;text-align:left;border:none;background:none;"';
+			$caption_style = ' style="caption-side:bottom;text-align:left;border:none;background:none;margin:0;"';
 		}
 		if ( ! empty( $caption ) )
 			$caption = "<caption{$caption_class}{$caption_style}>{$caption}</caption>\n";
@@ -479,9 +479,9 @@ class TablePress_Render {
 		$output .= "</table>\n";
 
 		// name/description below table (HTML already generated above)
-		if ( 'below' == $this->render_options['print_name'] )
+		if ( $this->render_options['print_name'] && 'below' == $this->render_options['print_name_position'] )
 			$output .= $print_name_html;
-		if ( 'below' == $this->render_options['print_description'] )
+		if ( $this->render_options['print_description'] && 'below' == $this->render_options['print_description_position'] )
 			$output .= $print_description_html;
 
 		$this->output = apply_filters( 'tablepress_table_output', $output , $this->table, $this->render_options );
@@ -519,8 +519,8 @@ class TablePress_Render {
 					$this->colspan[ $row_idx ] = 1; // reset counter for colspan in this row, combined col- and rowspan might be happening
 					continue;
 				}
-				// invalid rowspan, so we set cell content from #rowspan# to a space
-				$cell_content = '&nbsp;';
+				// invalid rowspan, so we set cell content from #rowspan# to empty
+				$cell_content = '';
 			} elseif ( $this->span_trigger['colspan'] == $cell_content ) { // there will be a colspan
 				// check for #colspan# in first column, which doesn't make sense
 				if ( $col_idx > 1
@@ -529,32 +529,27 @@ class TablePress_Render {
 					$this->rowspan[ $col_idx ] = 1; // reset counter for rowspan in this column, combined col- and rowspan might be happening
 					continue;
 				}
-				// invalid colspan, so we set cell content from #colspan# to a space
-				$cell_content = '&nbsp;';
+				// invalid colspan, so we set cell content from #colspan# to empty
+				$cell_content = '';
 			} elseif ( $this->span_trigger['span'] == $cell_content ) { // there will be a combined col- and rowspan
 				// check for #span# in first column or first or last row, which is not always possible
 				if ( ( $row_idx > 1 && $row_idx < $this->last_row_idx && $col_idx > 1 )
 				// we are in first, second, or last row or in the first or second column, so more checks are necessary
 				|| ( ( 1 == $row_idx && ! $this->render_options['table_head'] ) // no rowspan into table_head
-					&& ( 1 == $col_idx && ! $this->render_options['first_column_th'] ) ) // and no colspan into first column head
+					&& ( $col_idx > 1 || ( 1 == $col_idx && ! $this->render_options['first_column_th'] ) ) ) // and no colspan into first column head
 				|| ( ( $this->last_row_idx == $row_idx && ! $this->render_options['table_foot'] ) // no rowspan out of table_foot
-					&& ( 1 == $col_idx && ! $this->render_options['first_column_th'] ) ) ) // and no colspan into first column head
+					&& ( $col_idx > 1 || ( 1 == $col_idx && ! $this->render_options['first_column_th'] ) ) ) ) // and no colspan into first column head
 					continue;
 				// invalid span, so we set cell content from #span# to empty
 				$cell_content = '';
 			}
 
 			$span_attr = '';
-			$cell_class = 'column-' . ( $col_idx + 1 );
-			if ( $this->colspan[ $row_idx ] > 1 ) { // we have colspaned cells
+			if ( $this->colspan[ $row_idx ] > 1 ) // we have colspaned cells
 				$span_attr .= " colspan=\"{$this->colspan[ $row_idx ]}\"";
-				$cell_class .= " colspan-{$this->colspan[ $row_idx ]}";
-			}
-			if ( $this->rowspan[ $col_idx ] > 1 ) { // we have rowspaned cells
+			if ( $this->rowspan[ $col_idx ] > 1 ) // we have rowspaned cells
 				$span_attr .= " rowspan=\"{$this->rowspan[ $col_idx ]}\"";
-				$cell_class .= " rowspan-{$this->rowspan[ $col_idx ]}";
-			}
-
+			$cell_class = 'column-' . ( $col_idx + 1 );
 			$cell_class = apply_filters( 'tablepress_cell_css_class', $cell_class, $this->table['id'], $cell_content, $row_idx + 1, $col_idx + 1, $this->colspan[ $row_idx ], $this->rowspan[ $col_idx ] );
 			$class_attr = ( ! empty( $cell_class ) ) ? " class=\"{$cell_class}\"" : '';
 			$style_attr = ( ( 0 == $row_idx ) && ! empty( $this->render_options['column_widths'][$col_idx] ) ) ? " style=\"width:{$this->render_options['column_widths'][$col_idx]};\"" : '';
@@ -567,7 +562,6 @@ class TablePress_Render {
 			$this->rowspan[ $col_idx ] = 1; // reset
 		}
 
-		// @TODO: Maybe apply row-$row_idx and alternate colors classes only to body rows?
 		$row_class = 'row-' . ( $row_idx + 1 ) ;
 		if ( $this->render_options['alternating_row_colors'] )
 			$row_class .= ( 1 == ( $row_idx % 2 ) ) ? ' even' : ' odd';
@@ -592,7 +586,7 @@ class TablePress_Render {
 	protected function safe_output( $string ) {
 		// replace any & with &amp; that is not already an encoded entity (from function htmlentities2 in WP 2.8)
 		// complete htmlentities2() or htmlspecialchars() would encode <HTML> tags, which we don't want
-		$string = preg_replace( "/&(?![A-Za-z]{0,4}\w{2,3};|#[0-9]{2,4};)/", "&amp;", $string );
+		$string = preg_replace( '/&(?![A-Za-z]{0,4}\w{2,3};|#[0-9]{2,4};)/', '&amp;', $string );
 		// substitute line breaks with HTML <br> tags, nl2br can be overwritten to false, if not wanted
 		if ( apply_filters( 'tablepress_apply_nl2br', true, $this->table['id'] ) )
 			$string = nl2br( $string );
@@ -616,7 +610,9 @@ class TablePress_Render {
 			'table_foot' => null,
 			'first_column_th' => false,
 			'print_name' => null,
+			'print_name_position' => null,
 			'print_description' => null,
+			'print_description_position' => null,
 			'cache_table_output' => true,
 			'extra_css_classes' => null,
 			'use_datatables' => null,
@@ -650,30 +646,43 @@ class TablePress_Render {
 	public function get_preview_css() {
 		return <<<CSS
 <style type="text/css">
+body {
+	font-family: sans-serif;
+}
 .tablepress {
 	border-collapse: collapse;
-	border: 2px solid #000000;
+	border: none;
 	margin: 10px auto;
 }
 .tablepress td,
 .tablepress th {
 	box-sizing: border-box;
 	width: 200px;
-	border: 1px solid #dddddd;
-	padding: 3px;
+	padding: 8px;
+	text-align: left;
+}
+.tablepress tbody tr,
+.tablepress tfoot tr {
+	border-top: 1px solid #dddddd;
+}
+.tablepress tbody tr:first-child {
+	border-top: 0;
+}
+.tablepress thead tr {
+	border-bottom: 1px solid #dddddd;
 }
 .tablepress thead tr,
 .tablepress tfoot tr {
-	background-color: #e6eeee;
+	background-color: #d9edf7;
 }
 .tablepress tbody tr.even {
 	background-color: #ffffff;
 }
 .tablepress tbody tr.odd {
-	background-color: #eeeeee;
+	background-color: #f9f9f9;
 }
 .tablepress .row-hover tr:hover {
-	background-color: #d0d0d6;
+	background-color: #f3f3f3;
 }
 </style>
 CSS;

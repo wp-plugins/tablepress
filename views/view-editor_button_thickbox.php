@@ -70,7 +70,7 @@ class TablePress_Editor_Button_Thickbox_View extends TablePress_View {
 		wp_print_styles( 'colors' );
 		wp_print_scripts( 'jquery' );
 ?>
-<title><?php printf( __( '%s &lsaquo; TablePress', 'tablepress' ), __( 'List of Tables', 'tablepress' ) ); ?></title>
+<title><?php printf( __( '%1$s &lsaquo; %2$s', 'tablepress' ), __( 'List of Tables', 'tablepress' ), 'TablePress' ); ?></title>
 <style type="text/css">
 body {
 	margin: -26px 0px 15px 15px; /* top has -28px offset to account for html.wp-toolbar */
@@ -78,6 +78,14 @@ body {
 
 #icon-tablepress {
 	background: transparent url( '<?php echo plugins_url( 'admin/tablepress-icon.png', TABLEPRESS__FILE__ ); ?>' ) no-repeat;
+}
+/* Retina images */
+@media only screen and (-webkit-min-device-pixel-ratio: 1.5) {
+	/* Screen icon */
+	#icon-tablepress {
+		background-image: url( '<?php echo plugins_url( 'admin/tablepress-icon-2x.png', TABLEPRESS__FILE__ ); ?>' );
+		background-size: 36px 36px;
+	}
 }
 
 /* width and font weight for the columns */
@@ -118,12 +126,12 @@ body {
 <body class="wp-admin js iframe">
 <div id="tablepress-page" class="wrap">
 <?php screen_icon( 'tablepress' ); ?>
-<h2><?php printf( __( '%s &lsaquo; TablePress', 'tablepress' ), __( 'List of Tables', 'tablepress' ) ); ?></h2>
+<h2><?php printf( __( '%1$s &lsaquo; %2$s', 'tablepress' ), __( 'List of Tables', 'tablepress' ), 'TablePress' ); ?></h2>
 <div id="poststuff">
 <p>
 <?php _e( 'This is a list of all available tables.', 'tablepress' ); ?> <?php _e( 'You may insert a table into a post or page here.', 'tablepress' ); ?>
 </p><p>
-<?php printf( __( 'Click the &quot;%s&quot; button for the desired table to insert the corresponding Shortcode (%s) into the editor.', 'tablepress' ), __( 'Insert Shortcode', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="[' . TablePress::$shortcode . ' id=&lt;ID&gt; /]" readonly="readonly" />' ); ?>
+<?php printf( __( 'Click the &quot;%s&quot; button for the desired table to automatically insert the<br />corresponding Shortcode (%s) into the editor.', 'tablepress' ), __( 'Insert Shortcode', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="[' . TablePress::$shortcode . ' id=&lt;ID&gt; /]" readonly="readonly" />' ); ?>
 </p>
 <?php
 	if ( ! empty( $_GET['s'] ) )
@@ -182,7 +190,8 @@ class TablePress_Editor_Button_Thickbox_List_Table extends WP_List_Table {
 		parent::__construct( array(
 			'singular'	=> 'tablepress-table',				// singular name of the listed records
 			'plural'	=> 'tablepress-editor-button-list', // plural name of the listed records
-			'ajax'		=> false							// does this list table support AJAX?
+			'ajax'		=> false,							// does this list table support AJAX?
+			'screen'	=> convert_to_screen( 'tablepress_editor_button_thickbox' )
 		) );
 	}
 
@@ -298,7 +307,7 @@ class TablePress_Editor_Button_Thickbox_List_Table extends WP_List_Table {
 	 * @return string HTML content of the cell
 	 */
 	protected function column_table_action( $item ) {
-		return '<input type="button" class="insert-shortcode button button-small" title="[' . TablePress::$shortcode . ' id=' . esc_attr( $item['id'] ) . ' /]" value="' . __( 'Insert Shortcode', 'tablepress' ) . '" />';
+		return '<input type="button" class="insert-shortcode button" title="[' . TablePress::$shortcode . ' id=' . esc_attr( $item['id'] ) . ' /]" value="' . __( 'Insert Shortcode', 'tablepress' ) . '" />';
 	}
 
 	/**

@@ -18,35 +18,6 @@ jQuery(document).ready( function($) {
 	postboxes.add_postbox_toggles( pagenow );
 
 	/**
-	 * AJAX functionality
-	 */
-
-	/**
-	 * Process links with a class "ajax-link" with AJAX
-	 *
-	 * @since 1.0.0
-	 */
-	$( '#tablepress-page' ).on( 'click', '.ajax-link', function( /* event */ ) {
-		var link = this,
-			action = link.className.replace(/^.*ajax-link /, '');
-		$.get(
-			ajaxurl,
-			link.href.split('?')['1'], /* query string of the link */
-			function( result ) {
-				if ( '1' != result )
-					return;
-
-				switch ( action ) {
-					case 'hide_message':
-						$( link ).closest( 'div' ).remove();
-						break;
-				}
-			}
-		);
-		return false;
-	} );
-
-	/**
 	 * Remove/add title to value on focus/blur of text fields "Table Name" and "Table Description" on "Add new Table" screen
 	 *
 	 * @since 1.0.0

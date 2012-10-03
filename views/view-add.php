@@ -21,15 +21,6 @@ defined( 'ABSPATH' ) || die( 'No direct script access allowed!' );
 class TablePress_Add_View extends TablePress_View {
 
 	/**
-	 * Number of screen columns for the Add Table View
-	 *
-	 * @since 1.0.0
-	 *
-	 * @var int
-	 */
-	protected $screen_columns = 2;
-
-	/**
 	 * Set up the view with data and do things that are specific for this view
 	 *
 	 * @since 1.0.0
@@ -50,7 +41,6 @@ class TablePress_Add_View extends TablePress_View {
 			$this->add_header_message( "<strong>{$this->action_messages[ $data['message'] ]}</strong>", $class );
 		}
 
-		$this->add_meta_box( 'support', __( 'Support', 'tablepress' ), array( &$this, 'postbox_support' ), 'side' );
 		$this->add_text_box( 'head', array( &$this, 'textbox_head' ), 'normal' );
 		$this->add_meta_box( 'add-table', __( 'Add New Table', 'tablepress' ), array( &$this, 'postbox_add_table' ), 'normal' );
 		$this->data['submit_button_caption'] = __( 'Add Table', 'tablepress' );
@@ -58,27 +48,23 @@ class TablePress_Add_View extends TablePress_View {
 	}
 
 	/**
-	 *
-	 *
-	 * @since 1.0.0
-	 */
-	public function postbox_support( $data, $box ) {
-		echo '<p>' . __( 'These people are proud supporters of TablePress:', 'tablepress' ) . '</p>';
-	}
-
-	/**
-	 *
+	 * Print the screen head text
 	 *
 	 * @since 1.0.0
 	 */
 	public function textbox_head( $data, $box ) {
 		?>
-		<p><?php _e( 'To add a new table, enter its name, a description (optional) and the number of rows and columns.', 'tablepress' ); ?><br /><?php _e( 'You can always change the name, description, and size of your table later.', 'tablepress' ); ?></p>
+		<p>
+			<?php _e( 'To add a new table, enter its name, a description (optional), and the number of rows and columns into the form below.', 'tablepress' ); ?>
+		</p>
+		<p>
+			<?php _e( 'You can always change the name, description, and size of your table later.', 'tablepress' ); ?>
+		</p>
 		<?php
 	}
 
 	/**
-	 *
+	 * Print the content of the "Add New Table" post meta box
 	 *
 	 * @since 1.0.0
 	 */
@@ -116,7 +102,7 @@ class TablePress_Add_View extends TablePress_View {
 	 * @since 1.0.0
 	 */
 	protected function help_tab_content() {
-		return 'Help for the Add new Table screen';
+		return 'Help for the Add New Table screen';
 	}
 
 } // class TablePress_Add_View

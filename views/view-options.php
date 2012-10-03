@@ -41,9 +41,8 @@ class TablePress_Options_View extends TablePress_View {
 		parent::setup( $action, $data );
 
 		$this->admin_page->enqueue_style( 'codemirror' );
-		$this->admin_page->enqueue_script( 'codemirror' );
-		$this->admin_page->enqueue_script( 'codemirror-css', array( 'tablepress-codemirror' ) );
-		$this->admin_page->enqueue_script( 'options', array( 'jquery', 'tablepress-codemirror', 'tablepress-codemirror-css' ) );
+		$this->admin_page->enqueue_script( 'codemirror', array(), false, true );
+		$this->admin_page->enqueue_script( 'options', array( 'jquery', 'tablepress-codemirror' ) );
 
 		$action_messages = array(
 			'success_save' => __( 'Options saved successfully.', 'tablepress' ),
@@ -57,25 +56,31 @@ class TablePress_Options_View extends TablePress_View {
 
 		$this->add_text_box( 'head', array( &$this, 'textbox_head' ), 'normal' );
 		$this->add_meta_box( 'frontend-options', __( 'Frontend Options', 'tablepress' ), array( &$this, 'postbox_frontend_options' ), 'normal' );
-		// $this->add_meta_box( 'backend-options', __( 'Backend Options', 'tablepress' ), array( &$this, 'postbox_backend_options' ), 'normal' ); // @TODO: Commented out as backend options are not yet used
 		$this->add_meta_box( 'user-options', __( 'User Options', 'tablepress' ), array( &$this, 'postbox_user_options' ), 'normal' );
 		$this->data['submit_button_caption'] = __( 'Save Changes', 'tablepress' );
 		$this->add_text_box( 'submit', array( &$this, 'textbox_submit_button' ), 'submit' );
 	}
 
 	/**
-	 *
+	 * Print the screen head text
 	 *
 	 * @since 1.0.0
 	 */
 	public function textbox_head( $data, $box ) {
 		?>
-		<p><?php _e( 'TablePress has several options which affect the plugin behavior in different areas.', 'tablepress' ); ?><br /><?php _e( 'Frontend Options influence the output and used features of tables in pages, posts or text-widgets.', 'tablepress' ); ?> <?php printf( __( 'The Backend Options control the plugin\'s admin area, e.g. the &quot;%s&quot; screen.', 'tablepress' ), __( 'Edit Table', 'tablepress' ) ); ?> <?php _e( 'Administrators have access to further Admin Options.', 'tablepress' ); ?></p>
+		<p>
+			<?php _e( 'TablePress has several options which affect the plugin\'s behavior in different areas.', 'tablepress' ); ?>
+		</p>
+		<p>
+			<?php _e( 'Frontend Options influence the styling of tables in pages, posts, or text widgets, by defining which CSS code shall be loaded.', 'tablepress' ); ?>
+		<br />
+			<?php _e( 'In the User Options, every TablePress user can choose the position of the plugin in the WordPress admin menu, and the desired plugin language.', 'tablepress' ); ?>
+			<?php // _e( 'Administrators have access to further Admin Options, e.g. to control which user groups are allowed to use TablePress.', 'tablepress' ); ?></p>
 		<?php
 	}
 
 	/**
-	 *
+	 * Print the content of the "Frontend Options" post meta box
 	 *
 	 * @since 1.0.0
 	 */
@@ -105,11 +110,7 @@ class TablePress_Options_View extends TablePress_View {
 				_e( sprintf( 'Information on available CSS selectors can be found in the <a href="%s">documentation</a>.', 'http://tablepress.org/documentation/' ), 'tablepress' );
 			?></p>
 			<label for="option-use-custom-css-file"><input type="checkbox" id="option-use-custom-css-file" name="options[use_custom_css_file]" value="true"<?php checked( $data['frontend_options']['use_custom_css_file'] ); ?> /> <?php _e( 'Use a file for storing and loading the "Custom CSS" code.', 'tablepress' ); ?> <?php _e( '<span class="description">(recommended)</span>', 'tablepress' ); ?></label><br />
-		<?php
-			echo content_url( 'tablepress-custom.css' );
-			echo ' ';
-			echo ( $data['frontend_options']['custom_css_file_exists'] ) ? '(File exists.)' : '(File seems not to exist.)';
-		?>
+			<input type="checkbox" style="visibility: hidden;" <?php // Dummy checkbox for space alignment ?>/> <?php echo content_url( 'tablepress-custom.css' ) . ' ' . ( ( $data['frontend_options']['custom_css_file_exists'] ) ? '(File exists.)' : '(File seems not to exist.)' ); ?>
 		</td>
 	</tr>
 </tbody>
@@ -118,25 +119,7 @@ class TablePress_Options_View extends TablePress_View {
 	}
 
 	/**
-	 *
-	 *
-	 * @since 1.0.0
-	 */
-	public function postbox_backend_options( $data, $box ) {
-?>
-<table class="tablepress-postbox-table fixed">
-<tbody>
-	<tr>
-		<th class="column-1" scope="row">Label</th>
-		<td class="column-2">Field</td>
-	</tr>
-</tbody>
-</table>
-<?php
-	}
-
-	/**
-	 * Render a form for user options
+	 * Print the content of the "User Options" post meta box
 	 *
 	 * @since 1.0.0
 	 */
@@ -159,7 +142,7 @@ class TablePress_Options_View extends TablePress_View {
 			$entries['edit-comments.php'] = preg_replace( '/ <span.*span>/', '', $entries['edit-comments.php'] );
 
 		// add separator and generic positions
-		$entries['-'] = __( '---', 'tablepress' );
+		$entries['-'] = '---';
 		$entries['top'] = __( 'Top-Level (top)', 'tablepress' );
 		$entries['middle'] = __( 'Top-Level (middle)', 'tablepress' );
 		$entries['bottom'] = __( 'Top-Level (bottom)', 'tablepress' );
