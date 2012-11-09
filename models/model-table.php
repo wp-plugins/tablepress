@@ -483,7 +483,7 @@ class TablePress_Table_Model extends TablePress_Model {
 			'options' => array(
 				'last_editor' => get_current_user_id(),
 				'table_head' => true,
-				'table_foot' => true,
+				'table_foot' => false,
 				'alternating_row_colors' => true,
 				'row_hover' => true,
 				'print_name' => false,
@@ -499,16 +499,15 @@ class TablePress_Table_Model extends TablePress_Model {
 				'datatables_lengthchange' => true,
 				'datatables_paginate_entries' => 10,
 				'datatables_info' => true,
-				'datatables_scrollX' => true,
+				'datatables_scrollX' => false,
 				'datatables_custom_commands' => ''
-				//'datatables_tabletools' => false
 			),
 			'visibility' => array(
 				'rows' => array( 1 ), // one visbile row
 				'columns' => array( 1 ) // one visible column
 			)
 		);
-		return $table;
+		return apply_filters( 'tablepress_table_template', $table );
 	}
 
 	/**
@@ -545,7 +544,7 @@ class TablePress_Table_Model extends TablePress_Model {
 		$new_table['visibility']['rows'] = array_map( 'intval', $new_table['visibility']['rows'] );
 		$new_table['visibility']['columns'] = array_map( 'intval', $new_table['visibility']['columns'] );
 
-		// Check dimensions of table data array (not done for newly added or copied tables)
+		// Check dimensions of table data array (not done for newly added, copied, or imported tables)
 		if ( $table_size_check ) {
 			if ( empty( $new_table['number'] )
 			|| ! isset( $new_table['number']['rows'] )
@@ -608,6 +607,9 @@ class TablePress_Table_Model extends TablePress_Model {
 					$new_table['options']['datatables_paginate_entries'] = 10; // default value
 			}
 			// merge new options
+			$default_table = $this->get_table_template();
+			$table['options'] = array_intersect_key( $table['options'], $default_table['options'] );
+			$new_table['options'] = array_intersect_key( $new_table['options'], $default_table['options'] );
 			$table['options'] = array_merge( $table['options'], $new_table['options'] );
 		}
 		// Table Visibility

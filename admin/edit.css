@@ -45,6 +45,7 @@ body.wait * {
 }
 /* To account for additional padding of #TB_WindowContent in direct preview */
 #table-preview {
+	height: 100%;
 	margin: -2px -15px -15px -15px;
 }
 
@@ -66,13 +67,11 @@ body.wait * {
 }
 
 /* spinner/loading animation while saving/preview preparation */
-.animation-saving,
-.animation-preview {
+.spinner.animation-saving,
+.spinner.animation-preview {
 	display: inline-block;
-	background: url(../../../../wp-admin/images/wpspin_light.gif);
-	height: 16px;
-	width: 16px;
-	margin: 4px 0 0 5px;
+	float: none;
+	margin: 7px 0 0 7px;
 	vertical-align: top;
 }
 
@@ -82,6 +81,14 @@ body.wait * {
 #tablepress-page div.preview-error {
 	margin: 0 0 15px;
 }
+
+/* make postboxes at least as wide as their contents,
+Attention: This decreases usability of the the sorting/moving feature of postboxes! */
+#tablepress-page .postbox {
+	display: inline-block; /* e.g. stretch to the width of the table */
+	min-width: 100%; /* but use the full width */
+}
+
 /* table cells */
 #edit-form-body td {
 	padding: 2px 2px 2px 0px;
@@ -116,6 +123,7 @@ body.wait * {
 
 #edit-form {
 	border-collapse: collapse;
+	margin-bottom: 5px; /* spacing for the scroll bar */
 }
 
 /* row and column moving with jQueryUI sortable */
@@ -124,12 +132,11 @@ body.wait * {
 	margin: auto;
 	width: 16px;
 	height: 16px;
-	cursor: move;
 	text-align: center;
 	font-weight: bold;
 }
-.no-js #edit-form .move-handle {
-	cursor: auto;
+.js #edit-form .move-handle {
+	cursor: move;
 }
 #edit-form-body .move-handle {
 	margin: auto 3px;
@@ -159,24 +166,21 @@ body.wait * {
 	vertical-align: top;
 }
 #edit-form-head .sort-control {
-	display: none;
 	float: right;
 	width: 12px;
 	height: 12px;
 	cursor: pointer;
 	margin: 2px 3px 0 0;
 }
-.js #edit-form-head .head:hover .sort-control {
+#edit-form-head .sorting-indicator {
 	display: block;
+	margin: 4px 2px 0 0;
 }
-.js #edit-form-head .ui-sortable-helper:hover .sort-control {
-	display: none;
+#edit-form-head .sort-asc .sorting-indicator {
+	background-position: 0 0;
 }
-#edit-form-head .sort-asc {
-	background: url(img/sort-asc.gif) no-repeat center center;
-}
-#edit-form-head .sort-desc {
-	background: url(img/sort-desc.gif) no-repeat center center;
+#edit-form-head .sort-desc .sorting-indicator {
+	background-position: -7px 0;
 }
 
 /* (red) highlighting of hidden rows and columns */

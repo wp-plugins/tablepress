@@ -168,7 +168,7 @@ class TablePress_Render {
 
 				// add all rows/columns to array if "all" value set for one of the four parameters
 				if ( 'all' == $this->render_options["{$action}_{$element}"] ) {
-					$this->render_options["{$action}_{$element}"] = range( 0, $num_{$element} - 1 );
+					$this->render_options["{$action}_{$element}"] = range( 0, ${'num_' . $element} - 1 );
 					continue;
 				}
 
@@ -484,7 +484,7 @@ class TablePress_Render {
 		if ( $this->render_options['print_description'] && 'below' == $this->render_options['print_description_position'] )
 			$output .= $print_description_html;
 
-		$this->output = apply_filters( 'tablepress_table_output', $output , $this->table, $this->render_options );
+		$this->output = apply_filters( 'tablepress_table_output', $output, $this->table, $this->render_options );
 	}
 
 	/**
@@ -536,7 +536,7 @@ class TablePress_Render {
 				if ( ( $row_idx > 1 && $row_idx < $this->last_row_idx && $col_idx > 1 )
 				// we are in first, second, or last row or in the first or second column, so more checks are necessary
 				|| ( ( 1 == $row_idx && ! $this->render_options['table_head'] ) // no rowspan into table_head
-					&& ( $col_idx > 1 || ( 1 == $col_idx && ! $this->render_options['first_column_th'] ) ) ) // and no colspan into first column head
+					&& ( $col_idx > 1 || ( 1 == $col_idx && ! $this->render_options['first_column_th'] ) ) ) // and no colspan into first column head
 				|| ( ( $this->last_row_idx == $row_idx && ! $this->render_options['table_foot'] ) // no rowspan out of table_foot
 					&& ( $col_idx > 1 || ( 1 == $col_idx && ! $this->render_options['first_column_th'] ) ) ) ) // and no colspan into first column head
 					continue;
@@ -565,12 +565,12 @@ class TablePress_Render {
 		$row_class = 'row-' . ( $row_idx + 1 ) ;
 		if ( $this->render_options['alternating_row_colors'] )
 			$row_class .= ( 1 == ( $row_idx % 2 ) ) ? ' even' : ' odd';
-		$row_class = apply_filters( 'tablepress_row_css_class', $row_class, $this->table['id'], $row_cells, $row_idx + 1 );
+		$row_class = apply_filters( 'tablepress_row_css_class', $row_class, $this->table['id'], $row_cells, $row_idx + 1, $this->table['data'][ $row_idx ] );
 		if ( ! empty( $row_class ) )
 			$row_class = " class=\"{$row_class}\"";
 
 		$row_cells = array_reverse( $row_cells ); // because we looped through the cells in reverse order
-		return "\t<tr{$row_class}>\n\t\t" . implode( '', $row_cells ) . "\n\t</tr>\n";
+		return "<tr{$row_class}>\n\t" . implode( '', $row_cells ) . "\n</tr>\n";
 	}
 
 	/**
@@ -623,7 +623,6 @@ class TablePress_Render {
 			'datatables_filter' => null,
 			'datatables_info' => null,
 			'datatables_scrollX' => null,
-			//'datatables_tabletools' => false,
 			'datatables_custom_commands' => null,
 			'datatables_locale' => get_locale(),
 			'show_rows' => '',
@@ -651,37 +650,40 @@ body {
 }
 .tablepress {
 	border-collapse: collapse;
+	border-spacing: 0;
+	width: 100%;
+	margin-bottom: 10px auto;
 	border: none;
-	margin: 10px auto;
 }
 .tablepress td,
 .tablepress th {
-	box-sizing: border-box;
-	width: 200px;
 	padding: 8px;
+	border: none;
+	background: none;
 	text-align: left;
 }
-.tablepress tbody tr,
-.tablepress tfoot tr {
+.tablepress tbody tr td,
+.tablepress tfoot tr th {
 	border-top: 1px solid #dddddd;
 }
-.tablepress tbody tr:first-child {
+.tablepress tbody tr:first-child td {
 	border-top: 0;
 }
-.tablepress thead tr {
+.tablepress thead tr th {
 	border-bottom: 1px solid #dddddd;
 }
-.tablepress thead tr,
-.tablepress tfoot tr {
+.tablepress thead th,
+.tablepress tfoot th {
 	background-color: #d9edf7;
+	font-weight: bold;
 }
-.tablepress tbody tr.even {
-	background-color: #ffffff;
-}
-.tablepress tbody tr.odd {
+.tablepress tbody tr.odd td {
 	background-color: #f9f9f9;
 }
-.tablepress .row-hover tr:hover {
+.tablepress tbody tr.even td {
+	background-color: #ffffff;
+}
+.tablepress .row-hover tr:hover td {
 	background-color: #f3f3f3;
 }
 </style>

@@ -41,14 +41,14 @@ class TablePress_Export_View extends TablePress_View {
 			$this->add_header_message( "<strong>{$this->action_messages[ $data['message'] ]}</strong>", $class );
 		}
 
-		$this->add_text_box( 'head', array( &$this, 'textbox_head' ), 'normal' );
+		$this->add_text_box( 'head', array( $this, 'textbox_head' ), 'normal' );
 		if ( 0 == $data['tables_count'] ) {
-			$this->add_meta_box( 'no-tables', __( 'Export Tables', 'tablepress' ), array( &$this, 'postbox_no_tables' ), 'normal' );
+			$this->add_meta_box( 'no-tables', __( 'Export Tables', 'tablepress' ), array( $this, 'postbox_no_tables' ), 'normal' );
 		} else {
 			$this->admin_page->enqueue_script( 'export', array( 'jquery' ) );
-			$this->add_meta_box( 'export-form', __( 'Export Tables', 'tablepress' ), array( &$this, 'postbox_export_form' ), 'normal' );
+			$this->add_meta_box( 'export-form', __( 'Export Tables', 'tablepress' ), array( $this, 'postbox_export_form' ), 'normal' );
 			$this->data['submit_button_caption'] = __( 'Export Table', 'tablepress' );
-			$this->add_text_box( 'submit', array( &$this, 'textbox_submit_button' ), 'submit' );
+			$this->add_text_box( 'submit', array( $this, 'textbox_submit_button' ), 'submit' );
 		}
 	}
 
@@ -66,7 +66,9 @@ class TablePress_Export_View extends TablePress_View {
 		<p>
 			<?php _e( 'To export, select the tables and the desired export format.', 'tablepress' ); ?>
 			<?php _e( 'If you choose more than one table, the exported files will automatically be stored in a ZIP archive file.', 'tablepress' ); ?>
-			<?php _e( 'Be aware that only the table data, but no options or settings are exported with this method!', 'tablepress' ); ?>
+		<br />
+			<?php _e( 'Be aware that for the CSV and HTML formats only the table data, but no table options are exported!', 'tablepress' ); ?>
+			<?php _e( 'For the JSON format, the table data and the table options are exported.', 'tablepress' ); ?>
 		</p>
 		<?php
 	}
@@ -95,7 +97,13 @@ class TablePress_Export_View extends TablePress_View {
 <table class="tablepress-postbox-table fixed">
 <tbody>
 	<tr>
-		<th class="column-1 top-align" scope="row"><label for="tables-export"><?php _e( 'Tables to Export', 'tablepress' ); ?>:</label></th>
+		<th class="column-1 top-align" scope="row">
+			<label for="tables-export"><?php _e( 'Tables to Export', 'tablepress' ); ?>:</label>
+			<?php
+				if ( $data['zip_support_available'] )
+					echo '<br /><br /><label for="tables-export-select-all"><input type="checkbox" id="tables-export-select-all"> ' . __( 'Select all', 'tablepress' ) . '</label>';
+			?>
+		</th>
 		<td class="column-2">
 			<input type="hidden" name="export[tables_list]" id="tables-export-list" value="" />
 			<?php
@@ -117,7 +125,7 @@ class TablePress_Export_View extends TablePress_View {
 			</select>
 			<?php
 				if ( $data['zip_support_available'] )
-					echo '<br /><span class="description">' . __( 'You can select multiple tables by holding down the &quot;Ctrl&quot; key (Windows) or the &quot;Command&quot; key (Mac).', 'tablepress' ) . '</span>';
+					echo '<br /><span class="description">' . __( 'You can select multiple tables by holding down the &#8220;Ctrl&#8221; key (Windows) or the &#8220;Command&#8221; key (Mac).', 'tablepress' ) . '</span>';
 			?>
 		</td>
 	</tr>

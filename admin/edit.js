@@ -28,7 +28,7 @@ jQuery(document).ready( function( $ ) {
 			body_cells_pre: '<tr><td><span class="move-handle"></span></td><td><input type="checkbox" /><input type="hidden" class="visibility" name="table[visibility][rows][]" value="1" /></td>',
 			body_cells_post: '<td><span class="move-handle"></span></td></tr>',
 			body_cell: '<td><textarea rows="1"></textarea></td>',
-			head_cell: '<th class="head"><span class="sort-control sort-desc" title="' + tablepress_strings.sort_desc + '"></span><span class="sort-control sort-asc" title="' + tablepress_strings.sort_asc + '"></span><span class="move-handle"></span></th>',
+			head_cell: '<th class="head"><span class="sort-control sort-desc" title="' + tablepress_strings.sort_desc + '"><span class="sorting-indicator"></span></span><span class="sort-control sort-asc" title="' + tablepress_strings.sort_asc + '"><span class="sorting-indicator"></span></span><span class="move-handle"></span></th>',
 			foot_cell: '<th><input type="checkbox" /><input type="hidden" class="visibility" name="table[visibility][columns][]" value="1" /></th>',
 			set_table_changed: function() {
 				tp.made_changes = true;
@@ -172,7 +172,7 @@ jQuery(document).ready( function( $ ) {
 						return false;
 					}
 
-					$(this).closest( 'p' ).append( '<span class="animation-preview" title="' + tablepress_strings.preparing_preview + '"/>' );
+					$(this).closest( 'p' ).append( '<span class="animation-preview spinner" title="' + tablepress_strings.preparing_preview + '"/>' );
 					$( 'body' ).addClass( 'wait' );
 					$( '#table-preview' ).empty(); // clear preview
 
@@ -297,9 +297,7 @@ jQuery(document).ready( function( $ ) {
 					return;
 				}
 
-				$selected_rows
-					.removeClass( 'row-hidden' )
-					.find( '.visibility' ).val( '1' );
+				$selected_rows.removeClass( 'row-hidden' ).find( '.visibility' ).val( '1' );
 
 				tp.rows.stripe();
 				tp.table.set_table_changed();
@@ -351,10 +349,9 @@ jQuery(document).ready( function( $ ) {
 					$foot_rows = $table_body.find( '.foot-row' ).nextAll().andSelf(),
 					rows = $table_body.children().not( $head_rows ).not( $foot_rows ).get(),
 					/*
-					 * Natural Sort algorithm for Javascript - Version 0.6 - Released under MIT license
+					 * Natural Sort algorithm for Javascript - Version 0.7 - Released under MIT license
 					 * Author: Jim Palmer (based on chunking idea from Dave Koelle)
-					 * Contributors: Mike Grier (mgrier.com), Clint Priest, Kyle Adams, guillermo
-					 * See: http://js-naturalsort.googlecode.com/ and http://www.overset.com/2008/09/01/javascript-natural-sort-algorithm-with-unicode-support/
+					 * See: https://github.com/overset/javascript-natural-sort and http://www.overset.com/2008/09/01/javascript-natural-sort-algorithm-with-unicode-support/
 					 */
 					natural_sort = function( a, b ) {
 						var re = /(^-?[0-9]+(\.?[0-9]*)[df]?e?[0-9]?$|^0x[0-9a-f]+$|[0-9]+)/gi,
@@ -362,15 +359,16 @@ jQuery(document).ready( function( $ ) {
 							dre = /(^([\w ]+,?[\w ]+)?[\w ]+,?[\w ]+\d+:\d+(:\d+)?[\w ]?|^\d{1,4}[\/\-]\d{1,4}[\/\-]\d{1,4}|^\w+, \w+ \d+, \d{4})/,
 							hre = /^0x[0-9a-f]+$/i,
 							ore = /^0/,
-							// convert all to strings and trim()
-							x = a.toString().replace(sre, '') || '',
-							y = b.toString().replace(sre, '') || '',
+							// strip whitespace
+							x = a.replace(sre, '') || '',
+							y = b.replace(sre, '') || '',
 							// chunk/tokenize
 							xN = x.replace(re, '\0$1\0').replace(/\0$/,'').replace(/^\0/,'').split('\0'),
 							yN = y.replace(re, '\0$1\0').replace(/\0$/,'').replace(/^\0/,'').split('\0'),
 							// numeric, hex or date detection
 							xD = parseInt(x.match(hre)) || (xN.length != 1 && x.match(dre) && Date.parse(x)),
-							yD = parseInt(y.match(hre)) || xD && y.match(dre) && Date.parse(y) || null;
+							yD = parseInt(y.match(hre)) || xD && y.match(dre) && Date.parse(y) || null,
+							oFxNcL, oFyNcL;
 						// first try and sort Hex codes or Dates
 						if (yD) {
 							if ( xD < yD ) return -1;
@@ -382,7 +380,7 @@ jQuery(document).ready( function( $ ) {
 							oFxNcL = !(xN[cLoc] || '').match(ore) && parseFloat(xN[cLoc]) || xN[cLoc] || 0;
 							oFyNcL = !(yN[cLoc] || '').match(ore) && parseFloat(yN[cLoc]) || yN[cLoc] || 0;
 							// handle numeric vs string comparison - number < string - (Kyle Adams)
-							if (isNaN(oFxNcL) !== isNaN(oFyNcL)) return (isNaN(oFxNcL)) ? 1 : -1;
+							if (isNaN(oFxNcL) !== isNaN(oFyNcL)) { return (isNaN(oFxNcL)) ? 1 : -1; }
 							// rely on string comparison if different types - i.e. '02' < 2 != '02' < '2'
 							else if (typeof oFxNcL !== typeof oFyNcL) {
 								oFxNcL += '';
@@ -395,7 +393,7 @@ jQuery(document).ready( function( $ ) {
 					};
 
 				$.each( rows, function( row_idx, row ) {
-					row.sort_key = $(row).children().eq( column_idx ).find( 'textarea' ).val().toUpperCase();
+					row.sort_key = ( '' + $(row).children().eq( column_idx ).find( 'textarea' ).val() ).toLowerCase(); // convert to string, and lower case for case insensitive sorting
 				} );
 
 				rows.sort( function( a, b ) {
@@ -780,8 +778,8 @@ jQuery(document).ready( function( $ ) {
 			},
 			span: {
 				add: function( span ) {
-					// @TODO: Ask question according to span type
-					if ( ! confirm( tablepress_strings.span_add ) )
+					var span_add_msg = ( '#rowspan#' == span ) ? tablepress_strings.rowspan_add : tablepress_strings.colspan_add ;
+					if ( ! confirm( span_add_msg ) )
 						return;
 
 					$( '#edit-form-body' ).one( 'click', 'textarea', function() {
@@ -876,7 +874,7 @@ jQuery(document).ready( function( $ ) {
 
 				$row.find( '.move-handle' ).html( row_idx + 1 );
 			} )
-			.each( function( row_idx, row ) {
+			.each( function( row_idx, row ) { // need a second loop here to not break logic in previous loop, that queries textareas by their old ID
 				$( row ).find( 'textarea' ).attr( 'id', function( column_idx /*, old_id */ ) {
 					return 'cell-' + tp.columns.number_to_letter( column_idx + 1 ) + ( row_idx + 1 );
 				} );
@@ -903,7 +901,7 @@ jQuery(document).ready( function( $ ) {
 					return;
 				}
 
-				$(this).closest( 'p' ).append( '<span class="animation-saving" title="' + tablepress_strings.saving_changes + '"/>' );
+				$(this).closest( 'p' ).append( '<span class="animation-saving spinner" title="' + tablepress_strings.saving_changes + '"/>' );
 				$( '.save-changes-button' ).prop( 'disabled', true );
 				$( 'body' ).addClass( 'wait' );
 
@@ -918,14 +916,14 @@ jQuery(document).ready( function( $ ) {
 			},
 			ajax_success: function( data, status, jqXHR ) {
 				if ( ( 'undefined' == typeof status ) || ( 'success' != status ) )
-					tp.save_changes.error( 'AJAX call successful, but unclear status. Try again while holding down the "Shift" key.' );
+					tp.save_changes.error( 'AJAX call successful, but unclear status. Try again while holding down the &#8220;Shift&#8221; key.' );
 				else if ( ( 'undefined' == typeof data ) || ( null == data ) || ( '-1' == data ) || ( 'undefined' == typeof data.success ) || ( true !== data.success ) )
-					tp.save_changes.error( 'AJAX call successful, but unclear data. Try again while holding down the "Shift" key.' );
+					tp.save_changes.error( 'AJAX call successful, but unclear data. Try again while holding down the &#8220;Shift&#8221; key.' );
 				else
 					tp.save_changes.success( data );
 			},
 			ajax_error: function( jqXHR, status, error_thrown ) {
-				tp.save_changes.error( 'AJAX call failed: ' + status + ' - ' + error_thrown + '. Try again while holding down the "Shift" key.' );
+				tp.save_changes.error( 'AJAX call failed: ' + status + ' - ' + error_thrown + '. Try again while holding down the &#8220;Shift&#8221; key.' );
 			},
 			success: function( data ) {
 				// saving was successful, so the original ID has changed to the (maybe) new ID -> we need to adjust all occurances
@@ -957,7 +955,6 @@ jQuery(document).ready( function( $ ) {
 			},
 			error: function( message ) {
 				tp.save_changes.after_saving_dialog( 'error', message );
-				//alert( tablepress_strings.save_changes_error );
 			},
 			after_saving_dialog: function( type, message ) {
 				if ( 'undefined' == typeof message )
@@ -997,7 +994,7 @@ jQuery(document).ready( function( $ ) {
 					'#link-add':			tp.content.link.add,
 					'#image-add':			tp.content.image.add,
 					'#span-add-rowspan':	function() { tp.content.span.add( '#rowspan#' ); },
-					'#span-add-colspan':	function() { tp.content.span.add( '#colspan#' ); },
+					'#span-add-colspan':	function() { tp.content.span.add( '#colspan#' ); },
 					'.show-preview-button': tp.table.preview.trigger,
 					'.save-changes-button': tp.save_changes.trigger,
 					'.show-help-box':		function() {
@@ -1099,8 +1096,8 @@ jQuery(document).ready( function( $ ) {
 		}
 	};
 
-	// do allow wide tables to scroll sideways, only on "Edit" screen
-	$( '#wpbody-content' ).css( 'overflow-x', 'scroll' );
+	// allow wide tables to scroll sideways, only on "Edit" screen
+	$( '#wpbody-content' ).css( 'overflow', 'visible' );
 
 	// run TablePress initialization
 	tp.init();

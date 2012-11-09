@@ -40,13 +40,13 @@ class TablePress_About_View extends TablePress_View {
 	public function setup( $action, $data ) {
 		parent::setup( $action, $data );
 
-		$this->add_meta_box( 'plugin-purpose', __( 'Plugin Purpose', 'tablepress' ), array( &$this, 'postbox_plugin_purpose' ), 'normal' );
-		$this->add_meta_box( 'usage', __( 'Usage', 'tablepress' ), array( &$this, 'postbox_usage' ), 'normal' );
-		$this->add_meta_box( 'more-information', __( 'More Information and Documentation', 'tablepress' ), array( &$this, 'postbox_more_information' ), 'normal' );
-		$this->add_meta_box( 'help-support', __( 'Help and Support', 'tablepress' ), array( &$this, 'postbox_help_support' ), 'normal' );
-		$this->add_meta_box( 'author-license', __( 'Author and License', 'tablepress' ), array( &$this, 'postbox_author_license' ), 'side' );
-		$this->add_meta_box( 'credits-thanks', __( 'Credits and Thanks', 'tablepress' ), array( &$this, 'postbox_credits_thanks' ), 'side' );
-		$this->add_meta_box( 'debug-version-information', __( 'Debug and Version Information', 'tablepress' ), array( &$this, 'postbox_debug_version_information' ), 'side' );
+		$this->add_meta_box( 'plugin-purpose', __( 'Plugin Purpose', 'tablepress' ), array( $this, 'postbox_plugin_purpose' ), 'normal' );
+		$this->add_meta_box( 'usage', __( 'Usage', 'tablepress' ), array( $this, 'postbox_usage' ), 'normal' );
+		$this->add_meta_box( 'more-information', __( 'More Information and Documentation', 'tablepress' ), array( $this, 'postbox_more_information' ), 'normal' );
+		$this->add_meta_box( 'help-support', __( 'Help and Support', 'tablepress' ), array( $this, 'postbox_help_support' ), 'normal' );
+		$this->add_meta_box( 'author-license', __( 'Author and License', 'tablepress' ), array( $this, 'postbox_author_license' ), 'side' );
+		$this->add_meta_box( 'credits-thanks', __( 'Credits and Thanks', 'tablepress' ), array( $this, 'postbox_credits_thanks' ), 'side' );
+		$this->add_meta_box( 'debug-version-information', __( 'Debug and Version Information', 'tablepress' ), array( $this, 'postbox_debug_version_information' ), 'side' );
 	}
 
 	/**
@@ -83,7 +83,7 @@ class TablePress_About_View extends TablePress_View {
 	</p>
 	<p>
 		<?php printf( __( 'To insert a table into a page, post, or text widget, copy its Shortcode %s and paste it at the desired place in the editor.', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="[' . TablePress::$shortcode . ' id=&lt;ID&gt; /]" readonly="readonly" />' ); ?>
-		<?php printf( __( 'You can also click the &quot;%s&quot; button in the editor toolbar to select and insert a table.', 'tablepress' ), __( 'Table', 'tablepress' ) ); ?>
+		<?php printf( __( 'You can also click the &#8220;%s&#8221; button in the editor toolbar to select and insert a table.', 'tablepress' ), __( 'Table', 'tablepress' ) ); ?>
 	</p>
 	<p>
 		<?php _e( 'Tables can be styled by changing and adding CSS commands.', 'tablepress' ); ?>
@@ -102,7 +102,7 @@ class TablePress_About_View extends TablePress_View {
 	public function postbox_more_information( $data, $box ) {
 		?>
 	<p>
-		<?php printf( __( 'More information about TablePress can be found on the <a href="%s">plugin\'s website</a> or on its page in the <a href="%s">WordPress Plugin Directory</a>.', 'tablepress' ), 'http://tablepress.org/', 'http://wordpress.org/extend/plugins/tablepress/' ); ?>
+		<?php printf( __( 'More information about TablePress can be found on the <a href="%s">plugin&#8217;s website</a> or on its page in the <a href="%s">WordPress Plugin Directory</a>.', 'tablepress' ), 'http://tablepress.org/', 'http://wordpress.org/extend/plugins/tablepress/' ); ?>
 		<?php printf( __( 'For technical information, please see the <a href="%s">documentation</a>.', 'tablepress' ), 'http://tablepress.org/documentation/' ); ?>
 	</p>
 		<?php
@@ -160,12 +160,13 @@ class TablePress_About_View extends TablePress_View {
 			<br />&middot; TablePress: <?php echo TablePress::version; ?>
 			<br />&middot; TablePress (DB): <?php echo TablePress::db_version; ?>
 			<br />&middot; TablePress table scheme: <?php echo TablePress::table_scheme_version; ?>
-			<br />&middot; <?php _e( 'Plugin installed', 'tablepress' ); ?>: <?php echo date( 'Y/m/d H:i:s', $data['first_activation'] ); ?>
+			<br />&middot; Plugin installed: <?php echo date( 'Y/m/d H:i:s', $data['first_activation'] ); ?>
 			<br />&middot; WordPress: <?php echo $GLOBALS['wp_version']; ?>
 			<br />&middot; PHP: <?php echo phpversion(); ?>
 			<br />&middot; mySQL (Server): <?php echo mysql_get_server_info(); ?>
 			<br />&middot; mySQL (Client): <?php echo mysql_get_client_info(); ?>
-			<br />&middot; ZIP support: <?php echo $data['zip_support_available'] ? __( 'yes', 'tablepress' ) : __( 'no', 'tablepress' ); ?>
+			<br />&middot; ZIP support: <?php echo $data['zip_support_available'] ? 'yes' : 'no'; ?>
+			<br />&middot; WP Memory Limit: <?php echo WP_MEMORY_LIMIT; ?>
 		</p>
 		<?php
 	}

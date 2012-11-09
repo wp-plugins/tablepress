@@ -102,14 +102,14 @@ abstract class TablePress_View {
 		$screen = get_current_screen();
 		if ( 0 != $this->screen_columns )
 			$screen->add_option( 'layout_columns', array( 'max' => $this->screen_columns ) );
-		add_filter( "get_user_option_screen_layout_{$screen->id}", array( &$this, 'set_current_screen_layout_columns' ) ); // enable two column layout
+		add_filter( "get_user_option_screen_layout_{$screen->id}", array( $this, 'set_current_screen_layout_columns' ) ); // enable two column layout
 
 		// add help tab
 		$screen->add_help_tab( array(
 			'id' => 'tablepress-help', // This should be unique for the screen.
 			'title' => __( 'TablePress Help', 'tablepress' ),
 			'content' => '<p>' . $this->help_tab_content() . '</p>'
-						. '<p>' . sprintf( __( 'More information about TablePress can be found on the <a href="%1$s">plugin\'s website</a> or on its page in the <a href="%s">WordPress Plugin Directory</a>.', 'tablepress' ), 'http://tablepress.org/', 'http://wordpress.org/extend/plugins/tablepress/' ) . ' '
+						. '<p>' . sprintf( __( 'More information about TablePress can be found on the <a href="%1$s">plugin&#8217;s website</a> or on its page in the <a href="%s">WordPress Plugin Directory</a>.', 'tablepress' ), 'http://tablepress.org/', 'http://wordpress.org/extend/plugins/tablepress/' ) . ' '
 						. sprintf( __( 'For technical information, see the <a href="%1$s">documentation</a>.', 'tablepress' ), 'http://tablepress.org/documentation/' ) . ' '
 						. sprintf( __( '<a href="%1$s">Support</a> is provided through the <a href="%2$s">WordPress Support Forums</a>.', 'tablepress' ), 'http://tablepress.org/support/', 'http://wordpress.org/tags/tablepress' ) . ' '
 						. sprintf( __( 'Before asking for support, please carefully read the <a href="%s">Frequently Asked Questions</a>, where you will find answers to the most common questions, and search through the forums.', 'tablepress' ), 'http://tablepress.org/faq/' ) . '<br />'
@@ -172,9 +172,9 @@ abstract class TablePress_View {
 		$this->_init_wp_pointers();
 
 		// necessary fields for all views
-		$this->add_text_box( 'default_nonce_fields', array( &$this, 'default_nonce_fields' ), 'header', false );
-		$this->add_text_box( 'action_nonce_field', array( &$this, 'action_nonce_field' ), 'header', false );
-		$this->add_text_box( 'action_field', array( &$this, 'action_field' ), 'header', false );
+		$this->add_text_box( 'default_nonce_fields', array( $this, 'default_nonce_fields' ), 'header', false );
+		$this->add_text_box( 'action_nonce_field', array( $this, 'action_nonce_field' ), 'header', false );
+		$this->add_text_box( 'action_field', array( $this, 'action_field' ), 'header', false );
 	}
 
 	/**
@@ -429,7 +429,7 @@ abstract class TablePress_View {
 		$got_pointers = false;
 		foreach ( array_diff( $this->wp_pointers, $dismissed ) as $pointer ) {
 			// Bind pointer print function
-			add_action( "admin_footer-{$GLOBALS['hook_suffix']}", array( &$this, 'wp_pointer_' . $pointer ) );
+			add_action( "admin_footer-{$GLOBALS['hook_suffix']}", array( $this, 'wp_pointer_' . $pointer ) );
 			$got_pointers = true;
 		}
 

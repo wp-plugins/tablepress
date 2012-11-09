@@ -46,31 +46,37 @@ jQuery(document).ready( function($) {
 	 *
 	 * @since 1.0.0
 	 */
-	$( '#tables-import-file-upload' ).on( 'change', set_import_format );
-	$( '#tables-import-url, #tables-import-server' ).on( 'blur', set_import_format );
-	function set_import_format() {
+	$( '#tables-import-file-upload, #tables-import-url, #tables-import-server' ).on( 'change', function( event ) {
 		var path = $(this).val(),
 			filename_start,
 			extension_start,
 			filename = path,
-			extension = '';
+			extension = 'csv';
+
+		// default extension: CSV for file upload and server, HTML for URL
+		if ( 'tables-import-url' == event.target.id )
+			extension = 'html';
 		// determine filename from full path
 		filename_start = path.lastIndexOf( '\\' );
-		if ( -1 != filename_start ) { // Windows-based path
+		if ( -1 != filename_start ) { // Windows-based path
 			filename = path.substr( filename_start + 1 );
 		} else {
 			filename_start = path.lastIndexOf( '/' );
-			if ( -1 != filename_start ) { // Windows-based path
+			if ( -1 != filename_start ) { // Windows-based path
 				filename = path.substr( filename_start + 1 );
 			}
 		}
 		// determine extension from filename
-		extension_start = path.lastIndexOf( '.' );
+		extension_start = filename.lastIndexOf( '.' );
 		if ( -1 != extension_start )
-			extension = path.substr( extension_start + 1 ).toLowerCase();
+			extension = filename.substr( extension_start + 1 ).toLowerCase();
+
+		// allow .htm for HTML as well
+		if ( 'htm' == extension )
+			extension = 'html';
 
 		$( '#tables-import-format' ).val( extension );
-	}
+	} );
 
 	/**
 	 * Check, whether inputs are valid
@@ -125,6 +131,13 @@ jQuery(document).ready( function($) {
 				.focus().select();
 			return false;
 		}
+
+		/* At least one checkbox must be check, to have something imported */
+		if ( ! $( '#import-wp-table-reloaded-tables' ).prop( 'checked' ) && ! $( '#import-wp-table-reloaded-css' ).prop( 'checked' ) ) {
+			alert( tablepress_import.error_wp_table_reloaded_nothing_selected );
+			return false;
+		}
+
 	} );
 
 } );

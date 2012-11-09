@@ -131,7 +131,7 @@ body {
 <p>
 <?php _e( 'This is a list of all available tables.', 'tablepress' ); ?> <?php _e( 'You may insert a table into a post or page here.', 'tablepress' ); ?>
 </p><p>
-<?php printf( __( 'Click the &quot;%s&quot; button for the desired table to automatically insert the<br />corresponding Shortcode (%s) into the editor.', 'tablepress' ), __( 'Insert Shortcode', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="[' . TablePress::$shortcode . ' id=&lt;ID&gt; /]" readonly="readonly" />' ); ?>
+<?php printf( __( 'Click the &#8220;%s&#8221; button for the desired table to automatically insert the<br />corresponding Shortcode (%s) into the editor.', 'tablepress' ), __( 'Insert Shortcode', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="[' . TablePress::$shortcode . ' id=&lt;ID&gt; /]" readonly="readonly" />' ); ?>
 </p>
 <?php
 	if ( ! empty( $_GET['s'] ) )
@@ -403,12 +403,12 @@ class TablePress_Editor_Button_Thickbox_List_Table extends WP_List_Table {
 
 		// Maybe search in the items
 		if ( $s )
-			$this->items = array_filter( $this->items, array( &$this, '_search_callback' ) );
+			$this->items = array_filter( $this->items, array( $this, '_search_callback' ) );
 
 		// Maybe sort the items
 		$_sortable_columns = $this->get_sortable_columns();
 		if ( $orderby && ! empty( $this->items ) && isset( $_sortable_columns["table_{$orderby}"] ) )
-			usort( $this->items, array( &$this, '_order_callback' ) );
+			usort( $this->items, array( $this, '_order_callback' ) );
 
 		// number of records to show per page
 		$per_page = 15; // hard-coded, as there's no possibility to change this in the Thickbox
