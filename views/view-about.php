@@ -120,7 +120,7 @@ class TablePress_About_View extends TablePress_View {
 		<?php _e( 'It is licensed as Free Software under GNU General Public License 2 (GPL 2).', 'tablepress' ); ?>
 	<br />
 		<?php printf( __( 'If you like the plugin, <a href="%s"><strong>giving a donation</strong></a> is recommended.', 'tablepress' ), 'http://tablepress.org/donate/' ); ?>
-		<?php printf( __( 'Please rate the plugin in the <a href="%s">WordPress Plugin Directory</a>.', 'tablepress' ), 'http://wordpress.org/extend/plugins/tablepress/' ); ?>
+		<?php printf( __( 'Please rate and review the plugin in the <a href="%s">WordPress Plugin Directory</a>.', 'tablepress' ), 'http://wordpress.org/support/view/plugin-reviews/tablepress' ); ?>
 	<br />
 		<?php _e( 'Donations and good ratings encourage me to further develop the plugin and to provide countless hours of support. Any amount is appreciated! Thanks!', 'tablepress' ); ?>
 	</p>
@@ -167,6 +167,7 @@ class TablePress_About_View extends TablePress_View {
 			<br />&middot; mySQL (Client): <?php echo mysql_get_client_info(); ?>
 			<br />&middot; ZIP support: <?php echo $data['zip_support_available'] ? 'yes' : 'no'; ?>
 			<br />&middot; WP Memory Limit: <?php echo WP_MEMORY_LIMIT; ?>
+			<br />&middot; Magic Quotes: <?php echo get_magic_quotes_gpc() ? 'on' : 'off'; ?>
 		</p>
 		<?php
 	}

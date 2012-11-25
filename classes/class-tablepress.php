@@ -27,7 +27,7 @@ abstract class TablePress {
 	 *
 	 * @const string
 	 */
-	const version = '0.7-beta';
+	const version = '0.8-beta';
 
 	/**
 	 * TablePress internal plugin version ("options scheme" version)
@@ -38,7 +38,7 @@ abstract class TablePress {
 	 *
 	 * @const int
 	 */
-	const db_version = 10;
+	const db_version = 13;
 
 	/**
 	 * TablePress "table scheme" (data format structure) version
@@ -94,6 +94,15 @@ abstract class TablePress {
 		if ( ( 'wp-login.php' === basename( $_SERVER['SCRIPT_FILENAME'] ) ) // Login screen
 				|| ( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST )
 				|| ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
+			return;
+		}
+
+		// check if minimum requirements are fulfilled, currently a stable WordPress 3.4
+		if ( version_compare( $GLOBALS['wp_version'], '3.4', '<' ) ) {
+			// show error notice to admins, if WP is not installed in the minimum required version, in which case TablePress will not work
+			if ( current_user_can( 'update_plugins' ) )
+				add_action( 'admin_notices', array( 'TablePress', 'show_minimum_requirements_error_notice' ) );
+			// and exit TablePress
 			return;
 		}
 
@@ -241,7 +250,7 @@ abstract class TablePress {
 	 * @param string $column Column string
 	 * @return int $number Column number, 1-based
 	 */
-	public function letter_to_number( $column ) {
+	public static function letter_to_number( $column ) {
 		$column = strtoupper( $column );
 		$count = strlen( $column );
 		$number = 0;
@@ -261,7 +270,7 @@ abstract class TablePress {
 	 * @param int $number Column number, 1-based
 	 * @return string $column Column string
 	 */
-	public function number_to_letter( $number ) {
+	public static function number_to_letter( $number ) {
 		$column = '';
 		while ( $number > 0 ) {
 			$column = chr( 65 + ( ( $number-1 ) % 26 ) ) . $column;
@@ -278,7 +287,7 @@ abstract class TablePress {
 	 * @param string $separator (optional) Separator between date and time
 	 * @return string Nice looking string with the date and time
 	 */
-	public function format_datetime( $datetime, $type = 'mysql', $separator = ' ' ) {
+	public static function format_datetime( $datetime, $type = 'mysql', $separator = ' ' ) {
 		if ( 'mysql' == $type )
 			return mysql2date( get_option( 'date_format' ), $datetime ) . $separator . mysql2date( get_option( 'time_format' ), $datetime );
 		else
@@ -291,7 +300,7 @@ abstract class TablePress {
 	 * @param int $user_id WP user ID
 	 * @return string Nickname of the WP user with the $user_id
 	 */
-	public function get_user_display_name( $user_id ) {
+	public static function get_user_display_name( $user_id ) {
 		$user = get_userdata( $user_id );
 		return ( $user && isset( $user->display_name ) ) ? $user->display_name : '';
 	}
@@ -362,6 +371,19 @@ abstract class TablePress {
 		}
 		wp_redirect( $redirect );
 		die();
+	}
+
+	/**
+	 * Show an error notice to admins, if TablePress's minimum requirements are not reached
+	 *
+	 * @since 1.0.0
+	 */
+	public static function show_minimum_requirements_error_notice() {
+		// Message is not translated as it is shown on every admin screen, for which we don't want to load translations
+		echo '<div class="error"><p>' .
+			'<strong>Attention:</strong> ' .
+			'The installed version of WordPress is too old for the TablePress plugin! TablePress requires an up-to-date version! <strong>Please <a href="' . admin_url( 'update-core.php' ) . '">update your WordPress installation</a></strong>!' .
+			"</p></div>\n";
 	}
 
 } // class TablePress

@@ -38,7 +38,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 		parent::__construct();
 
 		// enqueue CSS files
-		if ( $this->model_options->get( 'use_default_css' ) || $this->model_options->get( 'use_custom_css' ) )
+		if ( apply_filters( 'tablepress_use_default_css', true ) || $this->model_options->get( 'use_custom_css' ) )
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_css' ) );
 
 		// add DataTables invocation calls
@@ -64,13 +64,15 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 	 * @since 1.0.0
 	 */
 	public function init_shortcodes() {
-		// if WP-Table Reloaded is activated, remove it's Shortcodes, as these would otherwise be used instead of TablePress's Shortcodes
+		// if WP-Table Reloaded is activated, remove its Shortcodes and CSS, as these would otherwise be used instead of TablePress's Shortcodes
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 		if ( is_plugin_active( 'wp-table-reloaded/wp-table-reloaded.php' ) ) {
 			remove_shortcode( 'table-info' );
 			remove_shortcode( 'table' );
+			if ( isset( $GLOBALS['WP_Table_Reloaded_Frontend'] ) )
+				remove_action( 'wp_head', array( $GLOBALS['WP_Table_Reloaded_Frontend'], 'add_frontend_css' ) );
 		}
-		// Shortcode "table-info" needs to be declared before "table"! Otherwise it will not be recognized!
+		// Shortcode "table-info" needs to be declared before "table"! Otherwise it will not be recognized! (@TODO: Might no longer be the case since [22382] in WP 3.5.)
 		add_shortcode( TablePress::$shortcode_info, array( $this, 'shortcode_table_info' ) );
 		add_shortcode( TablePress::$shortcode, array( $this, 'shortcode_table' ) );
 	}
@@ -82,7 +84,8 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 	 */
 	public function enqueue_css() {
 		// add "Default CSS"
-		if ( $this->model_options->get( 'use_default_css' ) ) {
+		$use_default_css = apply_filters( 'tablepress_use_default_css', true );
+		if ( $use_default_css ) {
 			$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
 			$default_css_url = plugins_url( "css/default{$suffix}.css", TABLEPRESS__FILE__ );
 			$default_css_url = apply_filters( 'tablepress_default_css_url', $default_css_url );
@@ -100,7 +103,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 					$custom_css_url = content_url( 'tablepress-custom.css' );
 					$custom_css_url = apply_filters( 'tablepress_custom_css_url', $custom_css_url );
 					$custom_css_dependencies = array();
-					if ( $this->model_options->get( 'use_default_css' ) )
+					if ( $use_default_css )
 						$custom_css_dependencies[] = 'tablepress-default'; // if default CSS is desired, but also handled internally
 					$custom_css_version = apply_filters( 'tablepress_custom_css_version', $this->model_options->get( 'custom_css_version' ) );
 					wp_enqueue_style( 'tablepress-custom', $custom_css_url, $custom_css_dependencies, $custom_css_version );
@@ -113,7 +116,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 				$custom_css = apply_filters( 'tablepress_custom_css', $custom_css );
 				if ( ! empty( $custom_css ) ) {
 					// wp_add_inline_style() requires a loaded CSS file, so we have to work around that if "Default CSS" is disabled
-					if ( $this->model_options->get( 'use_default_css' ) )
+					if ( $use_default_css )
 						wp_add_inline_style( 'tablepress-default', $custom_css ); // handle of the file to which the <style> shall be appended
 					else
 						add_action( 'wp_head', array( $this, '_print_custom_css' ), 8 ); // priority 8 to hook in right after WP_Styles has been processed
@@ -166,6 +169,12 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 			foreach ( $table_store['instances'] as $html_id => $js_options ) {
 				$parameters = array();
 
+				// Settle dependencies/conflicts between certain features
+				if ( false !== $js_options['datatables_scrolly'] ) // not necessarily a boolean!
+					$js_options['datatables_paginate'] = false; // vertical scrolling and pagination don't work together
+				if ( ! $js_options['datatables_paginate'] )
+					$js_options['datatables_paginate_entries'] = false; // Pagination is required for the initial value to be set
+
 				// DataTables language/translation handling
 				$datatables_locale = apply_filters( 'tablepress_datatables_locale', $js_options['datatables_locale'], $table_id );
 				// only do the expensive language file checks if they haven't been done yet
@@ -189,7 +198,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 					$parameters['bSort'] = '"bSort":false';
 				if ( ! $js_options['datatables_paginate'] )
 					$parameters['bPaginate'] = '"bPaginate":false';
-				if ( $js_options['datatables_paginate'] && ! empty( $js_options['datatables_paginate_entries'] ) && 10 != $js_options['datatables_paginate_entries'] )
+				if ( ! empty( $js_options['datatables_paginate_entries'] ) && 10 != $js_options['datatables_paginate_entries'] )
 					$parameters['iDisplayLength'] = '"iDisplayLength":'. $js_options['datatables_paginate_entries'];
 				if ( ! $js_options['datatables_lengthchange'] )
 					$parameters['bLengthChange'] = '"bLengthChange":false';
@@ -197,12 +206,25 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 					$parameters['bFilter'] = '"bFilter":false';
 				if ( ! $js_options['datatables_info'] )
 					$parameters['bInfo'] = '"bInfo":false';
-				if ( $js_options['datatables_scrollX'] )
+				if ( $js_options['datatables_scrollx'] )
 					$parameters['sScrollX'] = '"sScrollX":"100%"';
+				if ( false !== $js_options['datatables_scrolly'] ) {
+					$parameters['sScrollY'] = "\"sScrollY\":\"{$js_options['datatables_scrolly']}\"";
+					$parameters['bScrollCollapse'] = '"bScrollCollapse":true';
+				}
 				if ( ! empty( $js_options['datatables_custom_commands'] ) )
 					$parameters['custom_commands'] = $js_options['datatables_custom_commands'];
 
 				$parameters = apply_filters( 'tablepress_datatables_parameters', $parameters, $table_id, $html_id, $js_options );
+
+				// if "aaSorting", "bSortClasses", or "asStripeClasses" are set in "Custom Commands", remove their default value
+				if ( isset( $parameters['custom_commands'] ) ) {
+					foreach ( array( 'aaSorting', 'bSortClasses', 'asStripeClasses' ) as $maybe_overwritten_parameter ) {
+						if ( false !== strpos( $parameters['custom_commands'], $maybe_overwritten_parameter ) )
+							unset( $parameters[ $maybe_overwritten_parameter ] );
+					}
+				}
+
 				$parameters = implode( ',', $parameters );
 				$parameters = ( ! empty( $parameters ) ) ? '{' . $parameters . '}' : '';
 
@@ -302,24 +324,7 @@ JS;
 
 		// generate "Edit Table" link
 		$render_options['edit_table_url'] = '';
-		/*
-		if ( is_user_logged_in() && apply_filters( 'tablepress_edit_link_below_table', true ) ) {
-			$user_group = $this->model_options->get( 'user_access_plugin' );
-			$capabilities = array(
-				'admin' => 'manage_options',
-				'editor' => 'publish_pages',
-				'author' => 'publish_posts',
-				'contributor' => 'edit_posts'
-			);
-			$min_capability = isset( $capabilities[ $user_group ] ) ? $capabilities[ $user_group ] : 'manage_options';
-			$min_capability = apply_filters( 'tablepress_min_needed_capability', $min_capability );
-
-			if ( current_user_can( $min_capability ) )
-				$render_options['edit_table_url'] = TablePress::url( array( 'action' => 'edit', 'table_id' => $table['id'] ) );
-		}
-		*/
-		// @TODO: temporary for above:
-		if ( is_user_logged_in() && apply_filters( 'tablepress_edit_link_below_table', true ) && current_user_can( apply_filters( 'tablepress_min_access_cap', 'edit_pages' ) ) )
+		if ( is_user_logged_in() && apply_filters( 'tablepress_edit_link_below_table', true ) && current_user_can( 'tablepress_edit_table', $table['id'] ) )
 			$render_options['edit_table_url'] = TablePress::url( array( 'action' => 'edit', 'table_id' => $table['id'] ) );
 
 		$render_options = apply_filters( 'tablepress_table_render_options', $render_options, $table );
@@ -330,7 +335,7 @@ JS;
 			$js_options = array();
 			foreach ( array( 'alternating_row_colors', 'datatables_sort', 'datatables_paginate',
 								'datatables_paginate', 'datatables_paginate_entries', 'datatables_lengthchange',
-								'datatables_filter', 'datatables_info', 'datatables_scrollX',
+								'datatables_filter', 'datatables_info', 'datatables_scrollx', 'datatables_scrolly',
 								'datatables_locale', 'datatables_custom_commands' ) as $option ) {
 				$js_options[ $option ] = $render_options[ $option ];
 			}

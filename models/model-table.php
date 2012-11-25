@@ -151,6 +151,15 @@ class TablePress_Table_Model extends TablePress_Model {
 			'data' => json_decode( $post['post_content'], true )
 		);
 
+		// Check if JSON could be decoded
+		if ( is_null( $table['data'] ) ) {
+			// set a single cell as the default
+			$table['data'] = array( array( 'The internal data of this table is corrupted!' ) );
+			// mark table as broken
+			$table['name'] = '[ERROR] ' . $table['name'];
+			$table['description'] = "[ERROR] THE TABLE DATA IS CORRUPTED!  DO NOT EDIT THIS TABLE NOW!\nInstead, please ask for support at http://wordpress.org/support/plugin/tablepress\n\n" . $table['description'];
+		}
+
 		return $table;
 	}
 
@@ -292,6 +301,9 @@ class TablePress_Table_Model extends TablePress_Model {
 		if ( '' == trim( $table['name'] ) )
 			$table['name'] = __( '(no name)', 'tablepress' );
 		$table['name'] = sprintf( __( 'Copy of %s', 'tablepress' ), $table['name'] );
+
+		// Set Last Editor to user who copied
+		$table['options']['last_editor'] = get_current_user_id();
 
 		// Merge this data into an empty table template
 		$table = $this->prepare_table( $this->get_table_template(), $table, false );

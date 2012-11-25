@@ -294,10 +294,17 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
+		$screen = get_current_screen();
+
+		// Hide "Last Modified By" column by default
+		if ( false === get_user_option( 'manage' . $screen->id . 'columnshidden' ) )
+			update_user_option( get_current_user_id(), 'manage' . $screen->id . 'columnshidden', array( 'table_last_modified_by' ), true );
+
 		parent::__construct( array(
 			'singular'	=> 'tablepress-table',		// singular name of the listed records
 			'plural'	=> 'tablepress-all-tables', // plural name of the listed records
-			'ajax'		=> false					// does this list table support AJAX?
+			'ajax'		=> false,					// does this list table support AJAX?
+			'screen'	=> $screen					// WP_Screen object
 		) );
 	}
 
@@ -335,11 +342,12 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 */
 	public function get_columns() {
 		$columns = array(
-			'cb' => $this->has_items() ? '<input type="checkbox" class="hide-if-no-js" />' : '', // checkbox for "Select all", but only if there are items in the table
+			'cb' => $this->has_items() ? '<input type="checkbox" />' : '', // checkbox for "Select all", but only if there are items in the table
 			'table_id' => __( 'ID', 'tablepress' ),
 			'table_name' => __( 'Table Name', 'tablepress' ), // just "name" is special in WP, which is why we prefix every entry here, to be safe!
 			'table_description' => __( 'Description', 'tablepress' ),
 			'table_author' => __( 'Author', 'tablepress' ),
+			'table_last_modified_by' => __( 'Last Modified By', 'tablepress' ),
 			'table_last_modified' => __( 'Last Modified', 'tablepress' )
 		);
 		return $columns;
@@ -359,10 +367,11 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 			return array();
 
 		$sortable_columns = array(
-			'table_id' => array( 'id', true ), //true means its already sorted
+			'table_id' => array( 'id', true ), // true means its already sorted
 			'table_name' => array( 'name', false ),
 			'table_description' => array( 'description', false ),
 			'table_author' => array( 'author', false ),
+			'table_last_modified_by' => array( 'last_modified_by', false ),
 			'table_last_modified' => array( 'last_modified', false )
 		);
 		return $sortable_columns;
@@ -377,7 +386,14 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 * @return string HTML content of the cell
 	 */
 	protected function column_cb( $item ) {
-		return '<input type="checkbox" name="table[]" value="' . esc_attr( $item['id'] ) . '" />';
+		$user_can_copy_table = current_user_can( 'tablepress_copy_table', $item['id'] );
+		$user_can_delete_table = current_user_can( 'tablepress_delete_table', $item['id'] );
+		$user_can_export_table = current_user_can( 'tablepress_export_table', $item['id'] );
+
+		if ( $user_can_copy_table || $user_can_delete_table || $user_can_export_table )
+			return '<input type="checkbox" name="table[]" value="' . esc_attr( $item['id'] ) . '" />';
+		else
+			return '';
 	}
 
 	/**
@@ -401,23 +417,38 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 * @return string HTML content of the cell
 	 */
 	protected function column_table_name( $item ) {
+		$user_can_edit_table = current_user_can( 'tablepress_edit_table', $item['id'] );
+		$user_can_copy_table = current_user_can( 'tablepress_copy_table', $item['id'] );
+		$user_can_delete_table = current_user_can( 'tablepress_delete_table', $item['id'] );
+		$user_can_export_table = current_user_can( 'tablepress_export_table', $item['id'] );
+		$user_can_preview_table = current_user_can( 'tablepress_preview_table', $item['id'] );
+
 		$edit_url = TablePress::url( array( 'action' => 'edit', 'table_id' => $item['id'] ) );
 		$copy_url = TablePress::url( array( 'action' => 'copy_table', 'item' => $item['id'], 'return' => 'list', 'return_item' => $item['id'] ), true, 'admin-post.php' );
 		$export_url = TablePress::url( array( 'action' => 'export', 'table_id' => $item['id'] ) );
 		$delete_url = TablePress::url( array( 'action' => 'delete_table', 'item' => $item['id'], 'return' => 'list', 'return_item' => $item['id'] ), true, 'admin-post.php' );
 		$preview_url = TablePress::url( array( 'action' => 'preview_table', 'item' => $item['id'], 'return' => 'list', 'return_item' => $item['id'] ), true, 'admin-post.php' );
+
 		if ( '' == trim( $item['name'] ) )
 			$item['name'] = __( '(no name)', 'tablepress' );
 
-		$row_text = '<strong><a title="' . sprintf ( __( 'Edit &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ) . '" class="row-title" href="' . $edit_url . '">' . esc_html( $item['name'] ) . '</a></strong>';
-		$row_actions = array(
-			'edit' => sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $edit_url, sprintf ( __( 'Edit &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Edit', 'tablepress' ) ),
-			'shortcode hide-if-no-js' => sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', '#', '[' . TablePress::$shortcode . ' id=' . esc_attr( $item['id'] ) . ' /]', __( 'Show Shortcode', 'tablepress' ) ),
-			'copy' => sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $copy_url, sprintf ( __( 'Copy &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Copy', 'tablepress' ) ),
-			'export' => sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $export_url, sprintf ( __( 'Export &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Export', 'tablepress' ) ),
-			'delete' => sprintf( '<a href="%1$s" title="%2$s" class="delete-link">%3$s</a>', $delete_url, sprintf ( __( 'Delete &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Delete', 'tablepress' ) ),
-			'table-preview' => sprintf( '<a href="%1$s" title="%2$s" target="_blank">%3$s</a>', $preview_url, sprintf ( __( 'Show a preview of &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Preview', 'tablepress' ) )
-		);
+		if ( $user_can_edit_table )
+			$row_text = '<strong><a title="' . sprintf ( __( 'Edit &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ) . '" class="row-title" href="' . $edit_url . '">' . esc_html( $item['name'] ) . '</a></strong>';
+		else
+			$row_text = '<strong>' . esc_html( $item['name'] ) . '</strong>';
+
+		$row_actions = array();
+		if ( $user_can_edit_table )
+			$row_actions['edit'] = sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $edit_url, sprintf ( __( 'Edit &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Edit', 'tablepress' ) );
+		$row_actions['shortcode hide-if-no-js'] = sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', '#', '[' . TablePress::$shortcode . ' id=' . esc_attr( $item['id'] ) . ' /]', __( 'Show Shortcode', 'tablepress' ) );
+		if ( $user_can_copy_table )
+			$row_actions['copy'] = sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $copy_url, sprintf ( __( 'Copy &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Copy', 'tablepress' ) );
+		if ( $user_can_export_table )
+			$row_actions['export'] = sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $export_url, sprintf ( __( 'Export &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Export', 'tablepress' ) );
+		if ( $user_can_delete_table )
+			$row_actions['delete'] = sprintf( '<a href="%1$s" title="%2$s" class="delete-link">%3$s</a>', $delete_url, sprintf ( __( 'Delete &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Delete', 'tablepress' ) );
+		if ( $user_can_preview_table )
+			$row_actions['table-preview'] = sprintf( '<a href="%1$s" title="%2$s" target="_blank">%3$s</a>', $preview_url, sprintf ( __( 'Show a preview of &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Preview', 'tablepress' ) );
 
 		return $row_text . $this->row_actions( $row_actions );
 	}
@@ -449,6 +480,18 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	}
 
 	/**
+	 * Render a cell in the "last_modified_by" column
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param array $item Data item for the current row
+	 * @return string HTML content of the cell
+	 */
+	protected function column_table_last_modified_by( $item ) {
+		return TablePress::get_user_display_name( $item['options']['last_editor'] );
+	}
+
+	/**
 	 * Render a cell in the "table_last_modified" column
 	 *
 	 * @since 1.0.0
@@ -477,11 +520,15 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 * @return array Bulk actions for this table
 	 */
 	public function get_bulk_actions() {
-		$bulk_actions = array(
-			'copy' => __( 'Copy', 'tablepress' ),
-			'export' => __( 'Export', 'tablepress' ),
-			'delete' => __( 'Delete', 'tablepress' )
-		);
+		$bulk_actions = array();
+
+		if ( current_user_can( 'tablepress_copy_tables' ) )
+			$bulk_actions['copy'] = __( 'Copy', 'tablepress' );
+		if ( current_user_can( 'tablepress_export_tables' ) )
+			$bulk_actions['export'] = __( 'Export', 'tablepress' );
+		if ( current_user_can( 'tablepress_delete_tables' ) )
+			$bulk_actions['delete'] = __( 'Delete', 'tablepress' );
+
 		return $bulk_actions;
 	}
 
@@ -526,9 +573,18 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	public function no_items() {
 		_e( 'No tables found.', 'tablepress' );
 		if ( 0 === $this->items_count ) {
+			$user_can_add_tables = current_user_can( 'tablepress_add_tables' );
+			$user_can_import_tables = current_user_can( 'tablepress_import_tables' );
+
 			$add_url = TablePress::url( array( 'action' => 'add' ) );
 			$import_url = TablePress::url( array( 'action' => 'import' ) );
-			echo ' ' . sprintf( __( 'You should <a href="%s">add</a> or <a href="%s">import</a> a table to get started!', 'tablepress' ), $add_url, $import_url );
+
+			if ( $user_can_add_tables && $user_can_import_tables )
+				echo ' ' . sprintf( __( 'You should <a href="%s">add</a> or <a href="%s">import</a> a table to get started!', 'tablepress' ), $add_url, $import_url );
+			elseif ( $user_can_add_tables )
+				echo ' ' . sprintf( __( 'You should <a href="%s">add</a> a table to get started!', 'tablepress' ), $add_url );
+			elseif ( $user_can_import_tables )
+				echo ' ' . sprintf( __( 'You should <a href="%s">import</a> a table to get started!', 'tablepress' ), $import_url );
 		}
 	}
 
@@ -575,6 +631,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 		|| false !== stripos( $item['name'], $term )
 		|| false !== stripos( $item['description'], $term )
 		|| false !== stripos( TablePress::get_user_display_name( $item['author'] ), $term )
+		|| false !== stripos( TablePress::get_user_display_name( $item['options']['last_editor'] ), $term )
 		|| false !== stripos( TablePress::format_datetime( $item['last_modified'], 'mysql', ' ' ), $term )
 		|| false !== stripos( json_encode( $item['data'] ), $term ) )
 			return true;
@@ -594,8 +651,13 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	protected function _order_callback( $item_a, $item_b ) {
 		global $orderby, $order;
 
-		if ( $item_a[$orderby] == $item_b[$orderby] )
-			return 0;
+		if ( 'last_modified_by' != $orderby ) {
+			if ( $item_a[$orderby] == $item_b[$orderby] )
+				return 0;
+		} else {
+			if ( $item_a['options']['last_editor'] == $item_b['options']['last_editor'] )
+				return 0;
+		}
 
 		// certain fields require some extra work before being sortable
 		switch ( $orderby ) {
@@ -606,6 +668,10 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 			case 'author':
 				// Get the actual author name, plain value is just the user ID
 				$result = strnatcasecmp( TablePress::get_user_display_name( $item_a['author'] ), TablePress::get_user_display_name( $item_b['author'] ) );
+				break;
+			case 'last_modified_by':
+				// Get the actual last editor name, plain value is just the user ID
+				$result = strnatcasecmp( TablePress::get_user_display_name( $item_a['options']['last_editor'] ), TablePress::get_user_display_name( $item_b['options']['last_editor'] ) );
 				break;
 			default:
 				// other fields (ID, name, description) are sorted as strings

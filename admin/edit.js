@@ -172,6 +172,18 @@ jQuery(document).ready( function( $ ) {
 						return false;
 					}
 
+					// validation checks
+					if ( $( '#option-datatables-paginate' ).prop( 'checked' ) && ! ( /^[1-9][0-9]{0,4}$/ ).test( $( '#option-datatables-paginate_entries' ).val() ) ) {
+						alert( tablepress_strings.num_pagination_entries_invalid );
+						$( '#option-datatables-paginate_entries' ).focus().select();
+						return;
+					}
+					if ( ( /[^A-Za-z0-9- _]/ ).test( $( '#option-extra-css-classes' ).val() ) ) {
+						alert( tablepress_strings.extra_css_classes_invalid );
+						$( '#option-extra-css-classes' ).focus().select();
+						return;
+					}
+
 					$(this).closest( 'p' ).append( '<span class="animation-preview spinner" title="' + tablepress_strings.preparing_preview + '"/>' );
 					$( 'body' ).addClass( 'wait' );
 					$( '#table-preview' ).empty(); // clear preview
@@ -419,7 +431,7 @@ jQuery(document).ready( function( $ ) {
 				var $rows = $( '#edit-form-body' ).children().removeClass( 'odd head-row foot-row' ).not( helper );
 				$rows.filter( ':even' ).addClass( 'odd' );
 				$rows = $rows.not( '.row-hidden' );
-				if( helper.hasClass( 'row-hidden' ) )
+				if ( helper.hasClass( 'row-hidden' ) )
 					$rows = $rows.not( '.ui-sortable-placeholder' );
 				if ( tp.table.head )
 					$rows.first().addClass( 'head-row' );
@@ -703,10 +715,15 @@ jQuery(document).ready( function( $ ) {
 				},
 				thickbox_size: function() {
 					var $link = $( '#advanced-editor-content-add_media' ),
-						url = $link.attr( 'href' ),
+						url,
 						width = $(window).width(),
 						W = ( 720 < width ) ? 720 : width,
 						H = $(window).height();
+
+					if ( ! $link.length ) // for temporary 3.5 compatibility
+						return;
+
+					url = $link.attr( 'href' );
 
 					if ( $( 'body.admin-bar' ).length )
 						H -= 28;
@@ -889,6 +906,12 @@ jQuery(document).ready( function( $ ) {
 		},
 		save_changes: {
 			trigger: function( event ) {
+				// validation checks
+				if ( $( '#option-datatables-paginate' ).prop( 'checked' ) && ! ( /^[1-9][0-9]{0,4}$/ ).test( $( '#option-datatables-paginate_entries' ).val() ) ) {
+					alert( tablepress_strings.num_pagination_entries_invalid );
+					$( '#option-datatables-paginate_entries' ).focus().select();
+					return;
+				}
 				if ( ( /[^A-Za-z0-9- _]/ ).test( $( '#option-extra-css-classes' ).val() ) ) {
 					alert( tablepress_strings.extra_css_classes_invalid );
 					$( '#option-extra-css-classes' ).focus().select();
@@ -942,11 +965,14 @@ jQuery(document).ready( function( $ ) {
 				$( '#nonce-edit-table' ).val( data.new_edit_nonce );
 				$( '#nonce-preview-table' ).val( data.new_preview_nonce );
 				// update URLs in Preview links
-				$( '.show-preview-button' ).attr( 'href',
-					$( '.show-preview-button' ).first().attr( 'href' )
-						.replace( /item=[a-zA-Z0-9_-]+/g, 'item=' + data.table_id )
-						.replace( /&_wpnonce=[a-z0-9]+/ig, '&_wpnonce=' + data.new_preview_nonce )
-				);
+				var $show_preview_buttons = $( '.show-preview-button' );
+				if ( $show_preview_buttons.length ) { // check necessary, because Preview button might not be visible
+					$show_preview_buttons.attr( 'href',
+						$show_preview_buttons.first().attr( 'href' )
+							.replace( /item=[a-zA-Z0-9_-]+/g, 'item=' + data.table_id )
+							.replace( /&_wpnonce=[a-z0-9]+/ig, '&_wpnonce=' + data.new_preview_nonce )
+					);
+				}
 				// update last modified date and user nickname
 				$( '#last-modified' ).text( data.last_modified );
 				$( '#last-editor' ).text( data.last_editor );
@@ -1095,9 +1121,6 @@ jQuery(document).ready( function( $ ) {
 			} ).disableSelection();
 		}
 	};
-
-	// allow wide tables to scroll sideways, only on "Edit" screen
-	$( '#wpbody-content' ).css( 'overflow', 'visible' );
 
 	// run TablePress initialization
 	tp.init();

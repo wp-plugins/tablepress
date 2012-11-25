@@ -270,7 +270,7 @@ class TablePress_Render {
 		$replaced_references = $replaced_ranges = array();
 
 		// remove all whitespace characters
-		$expression = preg_replace( '#\s#', '', $expression );
+		$expression = preg_replace( '#[\r\n\t ]#', '', $expression );
 
 		// expand cell ranges (like A3:A6) to a list of single cells (like A3,A4,A5,A6)
 		if ( preg_match_all( '#([A-Z]+)([0-9]+):([A-Z]+)([0-9]+)#', $expression, $referenced_cell_ranges, PREG_SET_ORDER ) ) {
@@ -281,7 +281,7 @@ class TablePress_Render {
 				$replaced_ranges[] = $cell_range[0];
 
 				if ( isset( $this->known_ranges[ $cell_range[0] ] ) ) {
-					$expression = str_replace( $cell_range[0], $this->known_ranges[ $cell_range[0] ], $expression );
+					$expression = preg_replace( '#(?<![A-Z])' . preg_quote( $cell_range[0], '#' ) . '(?![0-9])#', $this->known_ranges[ $cell_range[0] ], $expression );
 					continue;
 				}
 
@@ -305,7 +305,7 @@ class TablePress_Render {
 				}
 				$cell_list = implode( ',', $cell_list );
 
-				$expression = str_replace( $cell_range[0], $cell_list, $expression );
+				$expression = preg_replace( '#(?<![A-Z])' . preg_quote( $cell_range[0], '#' ) . '(?![0-9])#', $cell_list, $expression );
 				$this->known_ranges[ $cell_range[0] ] = $cell_list;
 			}
 		}
@@ -325,16 +325,20 @@ class TablePress_Render {
 				$ref_row = $cell_reference[2] - 1;
 
 				if ( ! ( isset( $this->table['data'][$ref_row] ) && isset( $this->table['data'][$ref_row][$ref_col] ) ) )
-					return '!ERROR! Non-Existing Cell';
+					return '!ERROR! Non-existing Cell';
 
 				$ref_parents = $parents;
 				$ref_parents[] = $cell_reference[0];
 
 				$result = $this->table['data'][$ref_row][$ref_col] = $this->_evaluate_cell( $this->table['data'][$ref_row][$ref_col], $ref_parents );
+				// Bail if there was an error already
 				if ( false !== strpos( $result, '!ERROR!' ) )
 					return $result;
+				// Bail if the cell does not result in a number (meaning it was a number or expression before being evaluated)
+				if ( ! is_numeric( $result ) )
+					return '!ERROR! ' . $cell_reference[0] . ' does not contain a number or expression';
 
-				$expression = str_replace( $cell_reference[0], $result, $expression );
+				$expression = preg_replace( '#(?<![A-Z])' . preg_quote( $cell_reference[0], '#' ) . '(?![0-9])#', $result, $expression );
 			}
 		}
 
@@ -505,8 +509,6 @@ class TablePress_Render {
 			// print formulas that are escaped with '= (like in Excel) as text:
 			if ( strlen( $cell_content ) > 2 && "'=" == substr( $cell_content, 0, 2 ) )
 				$cell_content = substr( $cell_content, 1 );
-			// @TODO: Maybe do this on the full HTML output, instead on each cell individually?
-			// @TODO: Maybe move this to after the colspan/rowspan checks in the next block?
 			$cell_content = do_shortcode( $this->safe_output( $cell_content ) );
 			$cell_content = apply_filters( 'tablepress_cell_content', $cell_content, $this->table['id'], $row_idx + 1, $col_idx + 1 );
 
@@ -601,6 +603,7 @@ class TablePress_Render {
 	 * @return array Default render options
 	 */
 	public function get_default_render_options() {
+		// Attention: Array keys have to be lower case, otherwise they won't match the Shortcode attributes, which will be passed in lowercase by WP
 		return array(
 			'id' => '',
 			'column_widths' => '',
@@ -622,7 +625,8 @@ class TablePress_Render {
 			'datatables_lengthchange' => null,
 			'datatables_filter' => null,
 			'datatables_info' => null,
-			'datatables_scrollX' => null,
+			'datatables_scrollx' => null,
+			'datatables_scrolly' => false,
 			'datatables_custom_commands' => null,
 			'datatables_locale' => get_locale(),
 			'show_rows' => '',
@@ -661,6 +665,7 @@ body {
 	border: none;
 	background: none;
 	text-align: left;
+	vertical-align: top;
 }
 .tablepress tbody tr td,
 .tablepress tfoot tr th {

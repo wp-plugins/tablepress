@@ -52,8 +52,6 @@ class TablePress_Editor_Button_Thickbox_View extends TablePress_View {
 		$this->action = $action;
 		$this->data = $data;
 
-		set_current_screen( 'tablepress_editor_button_thickbox' );
-
 		$this->wp_list_table = new TablePress_Editor_Button_Thickbox_List_Table();
 		$this->wp_list_table->set_items( $this->data['tables'] );
 		$this->wp_list_table->prepare_items();
@@ -77,13 +75,16 @@ body {
 }
 
 #icon-tablepress {
-	background: transparent url( '<?php echo plugins_url( 'admin/tablepress-icon.png', TABLEPRESS__FILE__ ); ?>' ) no-repeat;
+	background: transparent url(<?php echo plugins_url( 'admin/tablepress-icon.png', TABLEPRESS__FILE__ ); ?>) no-repeat;
 }
-/* Retina images */
-@media only screen and (-webkit-min-device-pixel-ratio: 1.5) {
+/* HiDPI images */
+@media print,
+ (-o-min-device-pixel-ratio: 5/4),
+ (-webkit-min-device-pixel-ratio: 1.25),
+ (min-resolution: 120dpi) {
 	/* Screen icon */
 	#icon-tablepress {
-		background-image: url( '<?php echo plugins_url( 'admin/tablepress-icon-2x.png', TABLEPRESS__FILE__ ); ?>' );
+		background-image: url(<?php echo plugins_url( 'admin/tablepress-icon-2x.png', TABLEPRESS__FILE__ ); ?>);
 		background-size: 36px 36px;
 	}
 }
@@ -111,6 +112,8 @@ body {
 	margin: 0;
 	padding: 0;
 	font-weight: bold;
+	-webkit-box-shadow: none;
+	box-shadow: none;
 }
 #tablepress-page .table-shortcode {
 	cursor: text;
@@ -191,7 +194,7 @@ class TablePress_Editor_Button_Thickbox_List_Table extends WP_List_Table {
 			'singular'	=> 'tablepress-table',				// singular name of the listed records
 			'plural'	=> 'tablepress-editor-button-list', // plural name of the listed records
 			'ajax'		=> false,							// does this list table support AJAX?
-			'screen'	=> convert_to_screen( 'tablepress_editor_button_thickbox' )
+			'screen'	=> get_current_screen()				// WP_Screen object
 		) );
 	}
 
