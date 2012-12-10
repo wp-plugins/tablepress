@@ -73,7 +73,7 @@ class TablePress_About_View extends TablePress_View {
 	public function postbox_usage( $data, $box ) {
 		?>
 	<p>
-		<?php _e( 'At first you should add or import a table.', 'tablepress' ); ?>
+		<?php _e( 'At first, you should add or import a table.', 'tablepress' ); ?>
 		<?php _e( 'This means that you either let the plugin create an empty table for you or that you load an existing table from either a CSV, HTML, or JSON file.', 'tablepress' ); ?>
 	</p>
 	<p>
@@ -136,7 +136,7 @@ class TablePress_About_View extends TablePress_View {
 		?>
 	<p>
 		<?php printf( __( '<a href="%s">Support</a> is provided through the <a href="%s">WordPress Support Forums</a>.', 'tablepress' ), 'http://tablepress.org/support/', 'http://wordpress.org/support/plugin/tablepress' ); ?>
-		<?php printf( __( 'Before asking for support, please carefully read the <a href="%s">Frequently Asked Questions</a> where you will find answers to the most common questions, and search through the forums.', 'tablepress' ), 'http://tablepress.org/faq/' ); ?>
+		<?php printf( __( 'Before asking for support, please carefully read the <a href="%s">Frequently Asked Questions</a>, where you will find answers to the most common questions, and search through the forums.', 'tablepress' ), 'http://tablepress.org/faq/' ); ?>
 	</p>
 	<p>
 		<?php printf( __( 'If you do not find an answer there, please <a href="%s">open a new thread</a> in the WordPress Support Forums.', 'tablepress' ), 'http://wordpress.org/support/plugin/tablepress' ); ?>
@@ -152,7 +152,6 @@ class TablePress_About_View extends TablePress_View {
 	public function postbox_debug_version_information( $data, $box ) {
 		?>
 		<p>
-			<?php _e( 'You are using the following versions of the software.', 'tablepress' ); ?>
 			<strong><?php _e( 'Please provide this information in bug reports and support requests.', 'tablepress' ); ?></strong>
 		</p>
 		<p>
@@ -162,12 +161,14 @@ class TablePress_About_View extends TablePress_View {
 			<br />&middot; TablePress table scheme: <?php echo TablePress::table_scheme_version; ?>
 			<br />&middot; Plugin installed: <?php echo date( 'Y/m/d H:i:s', $data['first_activation'] ); ?>
 			<br />&middot; WordPress: <?php echo $GLOBALS['wp_version']; ?>
+			<br />&middot; Multisite: <?php echo is_multisite() ? 'yes' : 'no'; ?>
 			<br />&middot; PHP: <?php echo phpversion(); ?>
 			<br />&middot; mySQL (Server): <?php echo mysql_get_server_info(); ?>
 			<br />&middot; mySQL (Client): <?php echo mysql_get_client_info(); ?>
 			<br />&middot; ZIP support: <?php echo $data['zip_support_available'] ? 'yes' : 'no'; ?>
 			<br />&middot; WP Memory Limit: <?php echo WP_MEMORY_LIMIT; ?>
 			<br />&middot; Magic Quotes: <?php echo get_magic_quotes_gpc() ? 'on' : 'off'; ?>
+			<br />&middot; WP_DEBUG: <?php echo WP_DEBUG ? 'true' : 'false'; ?>
 		</p>
 		<?php
 	}

@@ -120,6 +120,16 @@ class TablePress_Table_Model extends TablePress_Model {
 	 * @return array Post
 	 */
 	protected function _table_to_post( $table, $post_id ) {
+		// Sanitize each cell, if the user is not allowed to work with unfiltered HTML
+		// table name and description are sanitized by WordPress directly, but the JSON would break if we don't do it ourselves
+		if ( ! current_user_can( 'unfiltered_html' ) ) {
+			foreach ( $table['data'] as $row_idx => $row ) {
+				foreach ( $row as $column_idx => $cell_content ) {
+					$table['data'][ $row_idx ][ $column_idx ] = wp_kses_post( $cell_content ); // equals wp_filter_post_kses(), but without the unncessary slashes handling
+				}
+			}
+		}
+
 		$post = array(
 			'ID' => $post_id,
 			'post_title' => $table['name'],
@@ -486,6 +496,7 @@ class TablePress_Table_Model extends TablePress_Model {
 	 * @return array Empty table
 	 */
 	public function get_table_template() {
+		// Attention: Array keys have to be lowercase, to make it possible to match them with Shortcode attributes!
 		$table = array(
 			'id' => false,
 			'name' => '',
