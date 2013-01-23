@@ -29,6 +29,8 @@ class TablePress_Admin_AJAX_Controller extends TablePress_Controller {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
+		ob_start(); // buffer all outputs, to prevent errors/warnings being printed that make the JSON invalid
+
 		parent::__construct();
 
 		$ajax_actions = array( 'hide_message', 'save_table', 'preview_table' );
@@ -145,11 +147,9 @@ class TablePress_Admin_AJAX_Controller extends TablePress_Controller {
 			$response['last_editor'] = TablePress::get_user_display_name( $table['options']['last_editor'] );
 		}
 
-		// response output
-		header( 'Content-Type: application/json; charset=UTF-8' );
-		echo json_encode( $response );
-
-		exit;
+		// Send the response
+		$response['output_buffer'] = ob_get_clean(); // buffer all outputs, to prevent errors/warnings being printed that make the JSON invalid
+		wp_send_json( $response );
 	}
 
 	/**
@@ -214,7 +214,7 @@ class TablePress_Admin_AJAX_Controller extends TablePress_Controller {
 			$head_html .= $_render->get_preview_css();
 			// Add "Custom CSS"
 			if ( $this->model_options->get( 'use_custom_css_file' ) ) {
-				$custom_css = $this->model_options->load_custom_css_from_file();
+				$custom_css = $this->model_options->load_custom_css_from_file( 'normal' );
 				// fall back to "Custom CSS" in options, if it could not be retrieved from file
 				if ( false === $custom_css )
 					$custom_css = $this->model_options->get( 'custom_css' );
@@ -236,18 +236,16 @@ class TablePress_Admin_AJAX_Controller extends TablePress_Controller {
 			$body_html = __( 'The preview could not be loaded.', 'tablepress' );
 		}
 
-		// generate the response
+		// Generate the response
 		$response = array(
 			'success' => $success,
 			'head_html' => $head_html,
 			'body_html' => $body_html
 		);
 
-		// response output
-		header( 'Content-Type: application/json; charset=UTF-8' );
-		echo json_encode( $response );
-
-		exit;
+		// Send the response
+		$response['output_buffer'] = ob_get_clean(); // buffer all outputs, to prevent errors/warnings being printed that make the JSON invalid
+		wp_send_json( $response );
 	}
 
 } // class TablePress_Admin_AJAX_Controller

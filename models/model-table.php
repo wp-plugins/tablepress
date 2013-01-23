@@ -146,19 +146,19 @@ class TablePress_Table_Model extends TablePress_Model {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array $post Post
+	 * @param WP_Post $post Post
 	 * @param string $table_id Table ID
 	 * @return array Table
 	 */
 	protected function _post_to_table( $post, $table_id ) {
 		$table = array(
 			'id' => $table_id,
-			'name' => $post['post_title'],
-			'description' => $post['post_excerpt'],
-			'author' => $post['post_author'],
-//			'created' => $post['post_date'],
-			'last_modified' => $post['post_modified'],
-			'data' => json_decode( $post['post_content'], true )
+			'name' => $post->post_title,
+			'description' => $post->post_excerpt,
+			'author' => $post->post_author,
+//			'created' => $post->post_date,
+			'last_modified' => $post->post_modified,
+			'data' => json_decode( $post->post_content, true )
 		);
 
 		// Check if JSON could be decoded
@@ -167,7 +167,41 @@ class TablePress_Table_Model extends TablePress_Model {
 			$table['data'] = array( array( 'The internal data of this table is corrupted!' ) );
 			// mark table as broken
 			$table['name'] = '[ERROR] ' . $table['name'];
-			$table['description'] = "[ERROR] THE TABLE DATA IS CORRUPTED!  DO NOT EDIT THIS TABLE NOW!\nInstead, please ask for support at http://wordpress.org/support/plugin/tablepress\n\n" . $table['description'];
+
+			// if possible, try to find out what error prevented the JSON from being decoded
+			$json_error = '';
+			if ( function_exists( 'json_last_error' ) ) {
+				// Constant JSON_ERROR_UTF8 is only available as of PHP 5.3.3
+				if ( ! defined( 'JSON_ERROR_UTF8' ) )
+					define( 'JSON_ERROR_UTF8', 5 );
+
+				switch ( json_last_error() ) {
+					case JSON_ERROR_NONE:
+						$json_error = 'JSON_ERROR_NONE'; // should never happen here, as this is only called in case of an error
+						break;
+					case JSON_ERROR_DEPTH:
+						$json_error = 'JSON_ERROR_DEPTH';
+						break;
+					case JSON_ERROR_STATE_MISMATCH:
+						$json_error = 'JSON_ERROR_STATE_MISMATCH';
+						break;
+					case JSON_ERROR_CTRL_CHAR:
+						$json_error = 'JSON_ERROR_CTRL_CHAR';
+						break;
+					case JSON_ERROR_SYNTAX:
+						$json_error = 'JSON_ERROR_SYNTAX';
+						break;
+					case JSON_ERROR_UTF8:
+						$json_error = 'JSON_ERROR_UTF8';
+						break;
+					default:
+						$json_error = 'UNKNOWN ERROR';
+						break;
+				}
+				$json_error = " ({$json_error})";
+			}
+
+			$table['description'] = "[ERROR] TABLE IS CORRUPTED{$json_error}!  DO NOT EDIT THIS TABLE NOW!\nInstead, please ask for support at http://wordpress.org/support/plugin/tablepress\n-\n" . $table['description'];
 		}
 
 		return $table;
@@ -204,7 +238,7 @@ class TablePress_Table_Model extends TablePress_Model {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array Array of Tables
+	 * @return array Array of Tables, but each without table data!
 	 */
 	public function load_all() {
 		$tables = array();
@@ -212,16 +246,14 @@ class TablePress_Table_Model extends TablePress_Model {
 		if ( empty( $table_post ) )
 			return array();
 
-		$table_ids = array_keys( $table_post );
-		$table_ids = array_map( 'strval', $table_ids ); // convert table IDs to strings
-		$post_ids = array_values( $table_post );
-
 		// load all table posts with one query, to prime the cache
-		$this->model_post->load_posts( $post_ids );
+		$this->model_post->load_posts( array_values( $table_post ) );
 
 		// this loop now uses the WP cache
-		foreach ( $table_ids as $table_id ) {
+		foreach ( $table_post as $table_id => $post_id ) {
+			$table_id = (string)$table_id;
 			$tables[ $table_id ] = $this->load( $table_id );
+			unset( $tables[ $table_id ]['data'] ); // remove table data, to save memory
 		}
 		return $tables;
 	}
@@ -259,7 +291,9 @@ class TablePress_Table_Model extends TablePress_Model {
 		// at this point, post was successfully added
 
 		// invalidate table output caches that belong to this table
-		$this->_invalidate_table_output_caches( $table['id'] );
+		$this->_invalidate_table_output_cache( $table['id'] );
+		// Flush caching plugins' caches
+		$this->_flush_caching_plugins_caches();
 
 		return $table['id'];
 	}
@@ -346,7 +380,9 @@ class TablePress_Table_Model extends TablePress_Model {
 		$this->_remove_post_id( $table_id );
 
 		// invalidate table output caches that belong to this table
-		$this->_invalidate_table_output_caches( $table_id );
+		$this->_invalidate_table_output_cache( $table_id );
+		// Flush caching plugins' caches
+		$this->_flush_caching_plugins_caches();
 
 		return true;
 	}
@@ -388,15 +424,35 @@ class TablePress_Table_Model extends TablePress_Model {
 	 *
 	 * @param string $table_id Table ID
 	 */
-	protected function _invalidate_table_output_caches( $table_id ) {
+	protected function _invalidate_table_output_cache( $table_id ) {
 		$caches_list_transient_name = 'tablepress_c_' . md5( $table_id );
 		$caches_list = get_transient( $caches_list_transient_name );
-		if ( is_array( $caches_list ) ) {
-			foreach ( $caches_list as $cache_transient_name => $dummy_value ) {
+		if ( false !== $caches_list ) {
+			$caches_list = json_decode( $caches_list, true );
+			foreach ( $caches_list as $cache_transient_name ) {
 				delete_transient( $cache_transient_name );
 			}
 		}
 		delete_transient( $caches_list_transient_name );
+	}
+
+	/**
+	 * Flush the caches of the plugins W3 Total Cache, WP Supercache, and Cachify
+	 *
+	 * @since 1.0.0
+	 */
+	protected function _flush_caching_plugins_caches() {
+		if ( ! apply_filters( 'tablepress_flush_caching_plugins_caches', true ) )
+			return;
+
+		// W3 Total Cache
+		if ( function_exists( 'w3tc_pgcache_flush' ) )
+			w3tc_pgcache_flush();
+		// WP Super Cache
+		if ( function_exists( 'wp_cache_clear_cache' ) )
+			wp_cache_clear_cache();
+		// Cachify
+		do_action( 'cachify_flush_cache' );
 	}
 
 	/**
@@ -624,8 +680,12 @@ class TablePress_Table_Model extends TablePress_Model {
 		// Table Options
 		if ( isset( $new_table['options'] ) ) { // is for example not set for newly added tables
 			// specials check for certain options
-			if ( isset( $new_table['options']['extra_css_classes'] ) )
-				$new_table['options']['extra_css_classes'] = preg_replace( '/[^a-zA-Z0-9_ -]/', '', $new_table['options']['extra_css_classes'] );
+			if ( isset( $new_table['options']['extra_css_classes'] ) ) {
+				$new_table['options']['extra_css_classes'] = explode( ' ', $new_table['options']['extra_css_classes'] );
+				$new_table['options']['extra_css_classes'] = array_map( 'sanitize_html_class', $new_table['options']['extra_css_classes'] );
+				$new_table['options']['extra_css_classes'] = array_unique( $new_table['options']['extra_css_classes'] );
+				$new_table['options']['extra_css_classes'] = trim( implode( ' ', $new_table['options']['extra_css_classes'] ) );
+			}
 			if ( isset( $new_table['options']['datatables_paginate_entries'] ) ) {
 				$new_table['options']['datatables_paginate_entries'] = intval( $new_table['options']['datatables_paginate_entries'] );
 				if ( $new_table['options']['datatables_paginate_entries'] < 1 )
@@ -752,16 +812,14 @@ class TablePress_Table_Model extends TablePress_Model {
 		if ( empty( $table_post ) )
 			return;
 
-		$post_ids = array_values( $table_post );
-
 		// load all table posts with one query, to prime the cache
-		$this->model_post->load_posts( $post_ids );
+		$this->model_post->load_posts( array_values( $table_post ) );
 
 		// get default Table with default Table Options
 		$default_table = $this->get_table_template();
 
 		// go through all tables (this loop now uses the WP cache)
-		foreach ( $post_ids as $post_id ) {
+		foreach ( $table_post as $table_id => $post_id ) {
 			$table_options = $this->_get_table_options( $post_id );
 			// remove old (i.e. no longer existing) Table Options:
 			$table_options = array_intersect_key( $table_options, $default_table['options'] );
@@ -774,7 +832,6 @@ class TablePress_Table_Model extends TablePress_Model {
 	/**
 	 * Merge changes made for TablePress 0.6-beta:
 	 * Table Name/Table Description
-	 * @TODO: Remove in 1.0
 	 *
 	 * @since 0.6-beta
 	 */
@@ -783,10 +840,8 @@ class TablePress_Table_Model extends TablePress_Model {
 		if ( empty( $table_post ) )
 			return;
 
-		$post_ids = array_values( $table_post );
-
-		// go through all tables (this loop now uses the WP cache)
-		foreach ( $post_ids as $post_id ) {
+		// go through all tables
+		foreach ( $table_post as $table_id => $post_id ) {
 			$table_options = $this->_get_table_options( $post_id );
 
 			// Move "Print Name" to new format
@@ -805,20 +860,19 @@ class TablePress_Table_Model extends TablePress_Model {
 	}
 
 	/**
-	 * Merge changes made for TablePress 0.9-RC:
+	 * Merge changes made for TablePress 0.8-beta:
 	 * Conversion of parameter "datatables_scrollX" to "datatables_scrollx"
+	 * Fixes a bug that affects about the first 600 downloaders of 0.8-beta
 	 *
-	 * @since 0.9-RC
+	 * @since 0.8-beta
 	 */
-	public function merge_table_options_tp09() {
+	public function merge_table_options_tp08() {
 		$table_post = $this->tables->get( 'table_post' );
 		if ( empty( $table_post ) )
 			return;
 
-		$post_ids = array_values( $table_post );
-
-		// go through all tables (this loop now uses the WP cache)
-		foreach ( $post_ids as $post_id ) {
+		// go through all tables
+		foreach ( $table_post as $table_id => $post_id ) {
 			$table_options = $this->_get_table_options( $post_id );
 
 			// Convert parameter "datatables_scrollX" to "datatables_scrollx"
@@ -826,6 +880,47 @@ class TablePress_Table_Model extends TablePress_Model {
 				$table_options['datatables_scrollx'] = $table_options['datatables_scrollX'];
 
 			$this->_update_table_options( $post_id, $table_options );
+		}
+	}
+
+	/**
+	 * Invalidate all table output caches, e.g. after a plugin update
+	 * For TablePress 0.9-RC and onwards.
+	 *
+	 * @since 0.9-RC
+	 */
+	public function invalidate_table_output_caches() {
+		$table_post = $this->tables->get( 'table_post' );
+		if ( empty( $table_post ) )
+			return;
+
+		// go through all tables
+		foreach ( $table_post as $table_id => $post_id ) {
+			$this->_invalidate_table_output_cache( $table_id );
+		}
+	}
+
+	/**
+	 * Invalidate all table output caches, e.g. after a plugin update
+	 * For TablePress pre-0.9-RC updates
+	 *
+	 * @since 0.9-RC
+	 */
+	public function invalidate_table_output_caches_tp09() {
+		$table_post = $this->tables->get( 'table_post' );
+		if ( empty( $table_post ) )
+			return;
+
+		// go through all tables
+		foreach ( $table_post as $table_id => $post_id ) {
+			$caches_list_transient_name = 'tablepress_c_' . md5( $table_id );
+			$caches_list = get_transient( $caches_list_transient_name );
+			if ( is_array( $caches_list ) ) {
+				foreach ( $caches_list as $cache_transient_name => $dummy_value ) {
+					delete_transient( $cache_transient_name );
+				}
+			}
+			delete_transient( $caches_list_transient_name );
 		}
 	}
 

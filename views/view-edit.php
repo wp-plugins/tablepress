@@ -31,7 +31,7 @@ class TablePress_Edit_View extends TablePress_View {
 	public function setup( $action, $data ) {
 		parent::setup( $action, $data );
 
-		$this->action_messages = array(
+		$action_messages = array(
 			'success_save' => __( 'The table was saved successfully.', 'tablepress' ),
 			'success_add' => __( 'The table was added successfully.', 'tablepress' ),
 			'success_import' => __( 'The table was imported successfully.', 'tablepress' ),
@@ -41,15 +41,17 @@ class TablePress_Edit_View extends TablePress_View {
 			'success_save_success_id_change' => __( 'The table was saved successfully, and the table ID was changed.', 'tablepress' ),
 			'success_save_error_id_change' => __( 'The table was saved successfully, but the table ID could not be changed!', 'tablepress' )
 		);
-
-		if ( $data['message'] && isset( $this->action_messages[ $data['message'] ] ) ) {
+		// Custom handling instead of $this->process_action_messages(). Also, $action_messages is used below.
+		if ( $data['message'] && isset( $action_messages[ $data['message'] ] ) ) {
 			$class = ( 'error' == substr( $data['message'], 0, 5 ) || in_array( $data['message'], array( 'success_save_error_id_change' ) ) ) ? 'error' : 'updated' ;
-			$this->add_header_message( "<strong>{$this->action_messages[ $data['message'] ]}</strong>", $class );
+			$this->add_header_message( "<strong>{$action_messages[ $data['message'] ]}</strong>", $class );
 		}
 
 		wp_enqueue_style( 'wp-jquery-ui-dialog' ); // do this here to get CSS into <head>
 		add_action( 'admin_footer', array( $this, 'dequeue_media_upload_js' ), 2 ); // remove default media-upload.js, in favor of own code
 		add_thickbox();
+		add_filter( 'media_view_strings', array( $this, 'change_media_view_strings' ) );
+		wp_enqueue_media();
 
 		// Use modified version of wpLink, instead of default version (changes "Title" to "Link Text")
 		wp_deregister_script( 'wplink' );
@@ -109,7 +111,7 @@ class TablePress_Edit_View extends TablePress_View {
 				'no_colspan_first_col' => __( 'You can not add colspan to the first column!', 'tablepress' ),
 				'no_rowspan_table_head' => __( 'You can not connect cells into the table head row!', 'tablepress' ),
 				'no_rowspan_table_foot' => __( 'You can not connect cells out of the table foot row!', 'tablepress' )
-			), $this->action_messages ) // merge this to have messages available for AJAX after save dialog
+			), $action_messages ) // merge this to have messages available for AJAX after save dialog
 		) );
 
 		$this->add_text_box( 'head', array( $this, 'textbox_head' ), 'normal' );
@@ -133,6 +135,19 @@ class TablePress_Edit_View extends TablePress_View {
 	 */
 	public function dequeue_media_upload_js() {
 		wp_dequeue_script( 'media-upload' );
+	}
+
+	/**
+	 * Change Media View string "Insert into post" to "Insert into Table"
+	 *
+	 * @since 1.0.0
+	 *
+ 	 * @param array $strings Current set of Media View strings
+	 * @return array Changed Media View strings
+	 */
+	public function change_media_view_strings( $strings ) {
+		$strings['insertIntoPost'] = __( 'Insert into Table', 'tablepress' );
+		return $strings;
 	}
 
 	/**
@@ -333,11 +348,13 @@ class TablePress_Edit_View extends TablePress_View {
 	<tr class="bottom-border">
 		<td class="column-1">
 			<?php _e( 'Selected rows', 'tablepress' ); ?>:&nbsp;
+			<input type="button" class="button" id="rows-duplicate" value="<?php _e( 'Duplicate', 'tablepress' ); ?>" />
 			<input type="button" class="button" id="rows-insert" value="<?php _e( 'Insert', 'tablepress' ); ?>" />
 			<input type="button" class="button" id="rows-remove" value="<?php _e( 'Delete', 'tablepress' ); ?>" />
 		</td>
 		<td class="column-2">
 			<?php _e( 'Selected columns', 'tablepress' ); ?>:&nbsp;
+			<input type="button" class="button" id="columns-duplicate" value="<?php _e( 'Duplicate', 'tablepress' ); ?>" />
 			<input type="button" class="button" id="columns-insert" value="<?php _e( 'Insert', 'tablepress' ); ?>" />
 			<input type="button" class="button" id="columns-remove" value="<?php _e( 'Delete', 'tablepress' ); ?>" />
 		</td>
@@ -411,9 +428,6 @@ class TablePress_Edit_View extends TablePress_View {
 				'buttons' => 'strong,em,link,del,ins,img,code,spell,close'
 			)
 		);
-		// temporarily disable "Add Media" button in Advanced Editor for WP 3.5
-		if ( version_compare( $GLOBALS['wp_version'], '3.4.99', '>' ) )
-			$wp_editor_options['media_buttons'] = false;
 		wp_editor( '', 'advanced-editor-content', $wp_editor_options );
 	?>
 	<div class="submitbox">

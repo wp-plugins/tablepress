@@ -31,7 +31,8 @@ body.wait * {
 #TB_HideSelect {
 	z-index: 301099;
 }
-#TB_overlay {
+#TB_overlay,
+.media-modal {
 	z-index: 301100;
 }
 #TB_window {
@@ -112,6 +113,10 @@ body.wait * {
 #edit-form-body .odd {
 	background-color: #eeeeee;
 }
+/* alternating row colors for the blue color scheme */
+.admin-color-classic #edit-form-body .odd {
+	background-color: #e5f6ff;
+}
 
 #edit-form-body textarea {
 	display: block;
@@ -164,7 +169,9 @@ body.wait * {
 
 /* hightlighting of table head and foot in table cells */
 #edit-form-body .head-row,
-#edit-form-body .foot-row {
+#edit-form-body .foot-row,
+.admin-color-classic #edit-form-body .head-row,
+.admin-color-classic #edit-form-body .foot-row {
 	background-color: #d9edf7;
 }
 

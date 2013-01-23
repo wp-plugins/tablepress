@@ -95,13 +95,10 @@ class TablePress_Import {
 	 * @param array $data Data to import
 	 * @return bool|array False on error, table array on success
 	 */
-	function import_table( $format, $data ) {
-		// check and remove possible UTF-8 Byte-Order Mark (BOM)
-		$bom = pack( 'CCC', 0xef, 0xbb, 0xbf );
-		if ( 0 === strncmp( $data, $bom, 3 ) )
-			$data = substr( $data, 3 );
-
+	public function import_table( $format, $data ) {
 		$this->import_data = $data;
+
+		$this->fix_table_encoding();
 
 		switch ( $format ) {
 			case 'csv':
@@ -116,9 +113,6 @@ class TablePress_Import {
 			default:
 				return false;
 		}
-
-		if ( ! empty( $this->imported_table ) )
-			$this->fix_table_encoding();
 
 		return $this->imported_table;
 	}
@@ -193,17 +187,25 @@ class TablePress_Import {
 
 		$table = $table_html->body->table;
 
-		$rows = array();
-		if ( isset( $table->thead ) )
-			$rows = array_merge( $rows, $this->_import_html_rows( $table->thead[0]->tr ) );
+		$html_table = array(
+			'data' => array(),
+			'options' => array()
+		);
+		if ( isset( $table->thead ) ) {
+			$html_table['data'] = array_merge( $html_table['data'], $this->_import_html_rows( $table->thead[0]->tr ) );
+			$html_table['options']['table_head'] = true;
+		}
 		if ( isset( $table->tbody ) )
-			$rows = array_merge( $rows, $this->_import_html_rows( $table->tbody[0]->tr ) );
+			$html_table['data'] = array_merge( $html_table['data'], $this->_import_html_rows( $table->tbody[0]->tr ) );
 		if ( isset( $table->tr ) )
-			$rows = array_merge( $rows, $this->_import_html_rows( $table->tr ) );
-		if ( isset( $table->tfoot ) )
-			$rows = array_merge( $rows, $this->_import_html_rows( $table->tfoot[0]->tr ) );
+			$html_table['data'] = array_merge( $html_table['data'], $this->_import_html_rows( $table->tr ) );
+		if ( isset( $table->tfoot ) ) {
+			$html_table['data'] = array_merge( $html_table['data'], $this->_import_html_rows( $table->tfoot[0]->tr ) );
+			$html_table['options']['table_foot'] = true;
+		}
 
-		$this->imported_table = array( 'data' => $this->pad_array_to_max_cols( $rows ) );
+		$html_table['data'] = $this->pad_array_to_max_cols( $html_table['data'] );
+		$this->imported_table = $html_table;
 	}
 
 	/**
@@ -294,30 +296,25 @@ class TablePress_Import {
 	}
 
 	/**
-	 * Fixes the encoding to UTF-8 for a cell
-	 * @TODO: Function is not yet implemented
+	 * Fixes the encoding to UTF-8 for the entire string that is to be imported
 	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $string String to be encoded correctly
-	 * @return string Correctly encoded string
-	 */
-	protected function fix_encoding( $string ) {
-		// @TODO: Is this maybe possible with iconv()?
-		return $string;
-	}
-
-	/**
-	 * Fixes the encoding to UTF-8 for the entire table
+	 * @see http://stevephillips.me/blog/dealing-php-and-character-encoding
 	 *
 	 * @since 1.0.0
 	 */
 	protected function fix_table_encoding() {
-		if ( ! is_array( $this->imported_table['data'] ) || 0 == count( $this->imported_table['data'] ) )
-			return;
+		// Check and remove possible UTF-8 Byte-Order Mark (BOM)
+		$bom = pack( 'CCC', 0xef, 0xbb, 0xbf );
+		if ( 0 === strncmp( $this->import_data, $bom, 3 ) ) {
+			$this->import_data = substr( $this->import_data, 3 );
+			return; // If data has a BOM, it's UTF-8, so further checks unnecessary
+		}
 
-		foreach ( $this->imported_table['data'] as $row_idx => $row ) {
-			$this->imported_table['data'][ $row_idx ] = array_map( array( $this, 'fix_encoding' ), $row );
+		// Detect the character encoding and convert to UTF-8, if it's different
+		if ( function_exists( 'mb_detect_encoding' ) && function_exists( 'iconv' ) ) {
+			$current_encoding = mb_detect_encoding( $this->import_data, 'ASCII, UTF-8, ISO-8859-1' );
+			if ( 'UTF-8' != $current_encoding )
+				$this->import_data = @iconv( $current_encoding, 'UTF-8', $this->import_data );
 		}
 	}
 

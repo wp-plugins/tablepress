@@ -100,7 +100,7 @@ class TablePress_List_View extends TablePress_View {
 			$this->add_header_message( $message );
 		}
 
-		$this->action_messages = array(
+		$this->process_action_messages( array(
 			'success_delete' => _n( 'The table was deleted successfully.', 'The tables were deleted successfully.', 1, 'tablepress' ),
 			'success_delete_plural' => _n( 'The table was deleted successfully.', 'The tables were deleted successfully.', 2, 'tablepress' ),
 			'error_delete' => __( 'Error: The table could not be deleted.', 'tablepress' ),
@@ -116,11 +116,7 @@ class TablePress_List_View extends TablePress_View {
 			'error_copy_not_all_tables' => __( 'Notice: Not all selected tables could be copied!', 'tablepress' ),
 			'success_import' => __( 'The tables were imported successfully.', 'tablepress' ),
 			'success_import_wp_table_reloaded' => __( 'The tables were imported successfully from WP-Table Reloaded.', 'tablepress' )
-		);
-		if ( $data['message'] && isset( $this->action_messages[ $data['message'] ] ) ) {
-			$class = ( 'error' == substr( $data['message'], 0, 5 ) ) ? 'error' : 'updated';
-			$this->add_header_message( "<strong>{$this->action_messages[ $data['message'] ]}</strong>", $class );
-		}
+		) );
 
 		$this->add_text_box( 'head', array( $this, 'textbox_head' ), 'normal' );
 		$this->add_text_box( 'tables-list', array( $this, 'textbox_tables_list' ), 'normal' );
@@ -444,7 +440,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 		if ( $user_can_copy_table )
 			$row_actions['copy'] = sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $copy_url, sprintf ( __( 'Copy &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Copy', 'tablepress' ) );
 		if ( $user_can_export_table )
-			$row_actions['export'] = sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $export_url, sprintf ( __( 'Export &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Export', 'tablepress' ) );
+			$row_actions['export'] = sprintf( '<a href="%1$s" title="%2$s">%3$s</a>', $export_url, sprintf ( __( 'Export &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), _x( 'Export', 'row action', 'tablepress' ) );
 		if ( $user_can_delete_table )
 			$row_actions['delete'] = sprintf( '<a href="%1$s" title="%2$s" class="delete-link">%3$s</a>', $delete_url, sprintf ( __( 'Delete &#8220;%s&#8221;', 'tablepress' ), esc_attr( $item['name'] ) ), __( 'Delete', 'tablepress' ) );
 		if ( $user_can_preview_table )
@@ -503,7 +499,7 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 		$modified_timestamp = strtotime( $item['last_modified'] );
 		$current_timestamp = current_time( 'timestamp' );
 		$time_diff = $current_timestamp - $modified_timestamp;
-		if ( $time_diff >= 0 && $time_diff < 24*60*60 ) // time difference is only shown up to one day
+		if ( $time_diff >= 0 && $time_diff < DAY_IN_SECONDS ) // time difference is only shown up to one day
 			$time_diff = sprintf( __( '%s ago', 'tablepress' ), human_time_diff( $modified_timestamp, $current_timestamp ) );
 		else
 			$time_diff = TablePress::format_datetime( $item['last_modified'], 'mysql', '<br />' );
@@ -523,11 +519,11 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 		$bulk_actions = array();
 
 		if ( current_user_can( 'tablepress_copy_tables' ) )
-			$bulk_actions['copy'] = __( 'Copy', 'tablepress' );
+			$bulk_actions['copy'] = _x( 'Copy', 'bulk action', 'tablepress' );
 		if ( current_user_can( 'tablepress_export_tables' ) )
-			$bulk_actions['export'] = __( 'Export', 'tablepress' );
+			$bulk_actions['export'] = _x( 'Export', 'bulk action', 'tablepress' );
 		if ( current_user_can( 'tablepress_delete_tables' ) )
-			$bulk_actions['delete'] = __( 'Delete', 'tablepress' );
+			$bulk_actions['delete'] = _x( 'Delete', 'bulk action', 'tablepress' );
 
 		return $bulk_actions;
 	}
@@ -539,12 +535,10 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 	 * @since 1.0.0
 	 */
 	public function bulk_actions() {
-		$screen = get_current_screen();
-
 		if ( is_null( $this->_actions ) ) {
 			$no_new_actions = $this->_actions = $this->get_bulk_actions();
 			// This filter can currently only be used to remove actions.
-			$this->_actions = apply_filters( 'bulk_actions-' . $screen->id, $this->_actions );
+			$this->_actions = apply_filters( 'bulk_actions-' . $this->screen->id, $this->_actions );
 			$this->_actions = array_intersect_assoc( $this->_actions, $no_new_actions );
 			$two = '';
 			$name_id = 'bulk-action-top';
@@ -625,6 +619,8 @@ class TablePress_All_Tables_List_Table extends WP_List_Table {
 		static $term;
 		if ( is_null( $term ) )
 			$term = stripslashes( $_GET['s'] );
+
+		$item = TablePress::$controller->model_table->load( $item['id'] ); // load table again, with data
 
 		// search from easy to hard, so that "expensive" code maybe doesn't have to run
 		if ( false !== stripos( $item['id'], $term )

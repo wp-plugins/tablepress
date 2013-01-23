@@ -254,7 +254,7 @@ jQuery(document).ready( function( $ ) {
 					.map( function() { return $(this).index(); } ).get();
 				return $( new_rows ).each( function( row_idx, row ) {
 					$(row).children()
-						.filter( function( idx ) { return ( -1 != jQuery.inArray( idx, column_idxs ) ); } )
+						.filter( function( idx ) { return ( -1 != $.inArray( idx, column_idxs ) ); } )
 						.addClass( 'column-hidden' );
 				} );
 			},
@@ -282,6 +282,28 @@ jQuery(document).ready( function( $ ) {
 				}
 
 				$selected_rows.before( tp.rows.create( 1 ) );
+
+				tp.rows.stripe();
+				tp.reindex();
+			},
+			duplicate: function( event ) {
+				var $selected_rows = $( '#edit-form-body' ).find( 'input:checked' )
+					.prop( 'checked', event.shiftKey ).closest( 'tr' );
+
+				if ( 0 === $selected_rows.length ) {
+					alert( tablepress_strings.no_rows_selected );
+					return;
+				}
+
+				$selected_rows.each( function( idx, row ) {
+					var $row = $(row),
+						$textareas = $row.find( 'textarea' ),
+						$duplicated_row = $row.clone();
+					$duplicated_row.find( 'textarea' ).removeAttr( 'id' ).each( function( idx, cell ) {
+						$(cell).val( $textareas.eq( idx ).val() ); // setting val() is necessary, as clone() doesn't copy the current value, see jQuery bugs 5524, 2285, 3016
+					} );
+					$row.after( $duplicated_row );
+				} );
 
 				tp.rows.stripe();
 				tp.reindex();
@@ -357,8 +379,8 @@ jQuery(document).ready( function( $ ) {
 				var column_idx = $(this).parent().index(),
 					direction = ( $(this).hasClass( 'sort-asc' ) ) ? 1 : -1,
 					$table_body = $('#edit-form-body'),
-					$head_rows = $table_body.find( '.head-row' ).prevAll().andSelf(),
-					$foot_rows = $table_body.find( '.foot-row' ).nextAll().andSelf(),
+					$head_rows = $table_body.find( '.head-row' ).prevAll().addBack(),
+					$foot_rows = $table_body.find( '.foot-row' ).nextAll().addBack(),
 					rows = $table_body.children().not( $head_rows ).not( $foot_rows ).get(),
 					/*
 					 * Natural Sort algorithm for Javascript - Version 0.7 - Released under MIT license
@@ -481,13 +503,37 @@ jQuery(document).ready( function( $ ) {
 				column_idxs = $selected_columns.map( function() { return $(this).index(); } ).get();
 				$( '#edit-form-body' ).children().each( function( row_idx, row ) {
 					$(row).children()
-						.filter( function( idx ) { return ( -1 != jQuery.inArray( idx, column_idxs ) ); } )
+						.filter( function( idx ) { return ( -1 != $.inArray( idx, column_idxs ) ); } )
 						.before( tp.table.body_cell );
 				} );
 				$( '#edit-form-head' ).children()
-					.filter( function( idx ) { return ( -1 != jQuery.inArray( idx, column_idxs ) ); } )
+					.filter( function( idx ) { return ( -1 != $.inArray( idx, column_idxs ) ); } )
 					.before( tp.table.head_cell );
 				$selected_columns.before( tp.table.foot_cell );
+
+				tp.reindex();
+			},
+			duplicate: function( event ) {
+				var column_idxs,
+					$selected_columns = $( '#edit-form-foot' ).find( 'input:checked' )
+						.prop( 'checked', event.shiftKey ).closest( 'th' );
+
+				if ( 0 === $selected_columns.length ) {
+					alert( tablepress_strings.no_columns_selected );
+					return;
+				}
+
+				column_idxs = $selected_columns.map( function() { return $(this).index(); } ).get();
+				$( '#edit-form' ).find( 'tr' ).each( function( row_idx, row ) {
+					$(row).children().each( function( idx, cell ) {
+						if ( -1 != $.inArray( idx, column_idxs ) ) {
+							var $cell = $(cell),
+								$duplicated_cell = $cell.clone();
+								$duplicated_cell.find( 'textarea' ).removeAttr( 'id' ).val( $cell.find( 'textarea' ).val() ); // setting val() is necessary, as clone() doesn't copy the current value, see jQuery bugs 5524, 2285, 3016
+							$cell.after( $duplicated_cell );
+						}
+					} );
+				} );
 
 				tp.reindex();
 			},
@@ -504,7 +550,7 @@ jQuery(document).ready( function( $ ) {
 				column_idxs = $selected_columns.map( function() { return $(this).index(); } ).get();
 				$( '#edit-form-body' ).children().add( '#edit-form-head' ).each( function( row_idx, row ) {
 					$(row).children()
-						.filter( function( idx ) { return ( -1 != jQuery.inArray( idx, column_idxs ) ); } )
+						.filter( function( idx ) { return ( -1 != $.inArray( idx, column_idxs ) ); } )
 						.addClass( 'column-hidden' );
 				} );
 				$selected_columns.addClass( 'column-hidden' ).find( '.visibility' ).val( '0' );
@@ -524,7 +570,7 @@ jQuery(document).ready( function( $ ) {
 				column_idxs = $selected_columns.map( function() { return $(this).index(); } ).get();
 				$( '#edit-form-body' ).children().add( '#edit-form-head' ).each( function( row_idx, row ) {
 					$(row).children()
-						.filter( function( idx ) { return ( -1 != jQuery.inArray( idx, column_idxs ) ); } )
+						.filter( function( idx ) { return ( -1 != $.inArray( idx, column_idxs ) ); } )
 						.removeClass( 'column-hidden' );
 				} );
 				$selected_columns.removeClass( 'column-hidden' ).find( '.visibility' ).val( '1' );
@@ -556,7 +602,7 @@ jQuery(document).ready( function( $ ) {
 				column_idxs = $selected_columns.map( function() { return $(this).index(); } ).get();
 				$( '#edit-form-body' ).children().add( '#edit-form-head' ).each( function( row_idx, row ) {
 					$(row).children()
-						.filter( function( idx ) { return ( -1 != jQuery.inArray( idx, column_idxs ) ); } )
+						.filter( function( idx ) { return ( -1 != $.inArray( idx, column_idxs ) ); } )
 						.remove();
 				} );
 				$selected_columns.remove();
@@ -871,7 +917,7 @@ jQuery(document).ready( function( $ ) {
 							}
 							full_match = known_references[ first_cell ];
 
-							if ( 'undefined' != typeof second_cell ) {
+							if ( ( 'undefined' != typeof second_cell ) && ( '' != second_cell ) ) { // Chrome and IE pass an undefined variable, while Firefox passes an empty string
 								if ( ! known_references.hasOwnProperty( second_cell ) ) {
 									$cell = $( '#cell-' + second_cell );
 									if ( $cell.length )
@@ -1009,6 +1055,8 @@ jQuery(document).ready( function( $ ) {
 				'click': {
 					'#rows-insert':			tp.rows.insert,
 					'#columns-insert':		tp.columns.insert,
+					'#rows-duplicate':		tp.rows.duplicate,
+					'#columns-duplicate':	tp.columns.duplicate,
 					'#rows-remove':			tp.rows.remove,
 					'#columns-remove':		tp.columns.remove,
 					'#rows-hide':			tp.rows.hide,

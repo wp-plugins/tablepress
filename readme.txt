@@ -2,7 +2,7 @@
 Contributors: TobiasBg
 Donate link: http://tablepress.org/donate/
 Tags: html,table,data,editor,csv,excel,import,export
-Requires at least: 3.4
+Requires at least: 3.5
 Tested up to: 3.5.1
 Stable tag: 0.8.1-beta
 License: GPLv2
@@ -36,7 +36,7 @@ If you are currently using WP-Table Reloaded, it is recommended that you switch 
 5. "Export" screen
 6. "Plugin Options" screen
 7. "About" screen
-8. Two example tables (as they can be seen on the [TablePress website](http://tablepress.org/features/))
+8. Two example tables (as they can be seen on the [TablePress website](http://tablepress.org/demo/))
 
 == Installation ==
 
@@ -62,14 +62,12 @@ For support questions, bug reports, or feature requests, please use the [WordPre
 
 = Requirements? =
 
-In short: WordPress 3.4 or higher, while the latest version of WordPress is always recommended.
-
-TablePress 1.0 will require WordPress 3.5!
+In short: WordPress 3.5 or higher, while the latest version of WordPress is always recommended.
 
 = Languages and Localization? =
 
 The plugin currently includes the following languages:
-English, French, and German.
+Chinese (Simplified), English, French, German, Slovak, and Spanish.
 
 I'd really appreciate it, if you would translate the plugin into your language! Using Heiko Rabe's WordPress plugin [Codestyling Localization](http://wordpress.org/extend/plugins/codestyling-localization/) that really is as easy as pie. Just install the plugin, add your language, create the .po-file, translate the strings in the comfortable editor and create the .mo-file. It will automatically be saved in TablePress's plugin folder. If you send me the .mo- and .po-file, I will gladly include them into future plugin releases.
 There is also a .pot-file available to use in the "i18n" subfolder. Of course you can also use [poEdit](http://www.poedit.net/) as your editor, which also works nicely.

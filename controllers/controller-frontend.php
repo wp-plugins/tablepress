@@ -44,7 +44,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 		// add DataTables invocation calls
 		add_action( 'wp_print_footer_scripts', array( $this, 'add_datatables_calls' ), 11 ); // after inclusion of files
 
-		// Remove WP-Table Reloaded Shortcodes and add TablePress Shortcodes
+		// Remove WP-Table Reloaded Shortcodes and CSS, and add TablePress Shortcodes
 		add_action( 'init', array( $this, 'init_shortcodes' ), 20 ); // run on priority 20 as WP-Table Reloaded Shortcodes are registered at priority 10
 
 		// make TablePress Shortcodes work in text widgets
@@ -64,17 +64,15 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 	 * @since 1.0.0
 	 */
 	public function init_shortcodes() {
-		// if WP-Table Reloaded is activated, remove its Shortcodes and CSS, as these would otherwise be used instead of TablePress's Shortcodes
-		include_once ABSPATH . 'wp-admin/includes/plugin.php';
-		if ( is_plugin_active( 'wp-table-reloaded/wp-table-reloaded.php' ) ) {
-			remove_shortcode( 'table-info' );
-			remove_shortcode( 'table' );
-			if ( isset( $GLOBALS['WP_Table_Reloaded_Frontend'] ) )
-				remove_action( 'wp_head', array( $GLOBALS['WP_Table_Reloaded_Frontend'], 'add_frontend_css' ) );
-		}
-		// Shortcode "table-info" needs to be declared before "table"! Otherwise it will not be recognized! (@TODO: Might no longer be the case since [22382] in WP 3.5.)
-		add_shortcode( TablePress::$shortcode_info, array( $this, 'shortcode_table_info' ) );
+		// Remove previously registered [table /] Shortcodes (e.g. from WP-Table Reloaded), as these would otherwise be used instead of TablePress's Shortcodes
+		remove_shortcode( 'table' );
+		remove_shortcode( 'table-info' );
+		// Dequeue WP-Table Relaoded Default CSS, as it can influence TablePress table styling
+		if ( isset( $GLOBALS['WP_Table_Reloaded_Frontend'] ) )
+			remove_action( 'wp_head', array( $GLOBALS['WP_Table_Reloaded_Frontend'], 'add_frontend_css' ) );
+
 		add_shortcode( TablePress::$shortcode, array( $this, 'shortcode_table' ) );
+		add_shortcode( TablePress::$shortcode_info, array( $this, 'shortcode_table_info' ) );
 	}
 
 	/**
@@ -97,11 +95,19 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 			$print_custom_css_inline = true; // will be overwritten if file is used
 			if ( $this->model_options->get( 'use_custom_css_file' ) ) {
 				// fall back to "Custom CSS" in options, if it could not be retrieved from file
-				$custom_css_file_contents = $this->model_options->load_custom_css_from_file();
+				$custom_css_file_contents = '';
+				if ( ! defined( 'SCRIPT_DEBUG' ) || ! SCRIPT_DEBUG ) {
+					$custom_css_file_contents = $this->model_options->load_custom_css_from_file( 'minified' );
+					$custom_css_file = 'tablepress-custom.min.css';
+				}
+				if ( empty( $custom_css_file_contents ) ) {
+					$custom_css_file_contents = $this->model_options->load_custom_css_from_file( 'normal' );
+					$custom_css_file = 'tablepress-custom.css';
+				}
 				if ( ! empty( $custom_css_file_contents ) ) {
 					$print_custom_css_inline = false;
-					$custom_css_url = content_url( 'tablepress-custom.css' );
-					$custom_css_url = apply_filters( 'tablepress_custom_css_url', $custom_css_url );
+					$custom_css_url = content_url( $custom_css_file );
+					$custom_css_url = apply_filters( 'tablepress_custom_css_url', $custom_css_url, $custom_css_file );
 					$custom_css_dependencies = array();
 					if ( $use_default_css )
 						$custom_css_dependencies[] = 'tablepress-default'; // if default CSS is desired, but also handled internally
@@ -199,7 +205,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 				if ( ! $js_options['datatables_paginate'] )
 					$parameters['bPaginate'] = '"bPaginate":false';
 				if ( ! empty( $js_options['datatables_paginate_entries'] ) && 10 != $js_options['datatables_paginate_entries'] )
-					$parameters['iDisplayLength'] = '"iDisplayLength":'. $js_options['datatables_paginate_entries'];
+					$parameters['iDisplayLength'] = '"iDisplayLength":'. intval( $js_options['datatables_paginate_entries'] );
 				if ( ! $js_options['datatables_lengthchange'] )
 					$parameters['bLengthChange'] = '"bLengthChange":false';
 				if ( ! $js_options['datatables_filter'] )
@@ -209,7 +215,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 				if ( $js_options['datatables_scrollx'] )
 					$parameters['sScrollX'] = '"sScrollX":"100%"';
 				if ( false !== $js_options['datatables_scrolly'] ) {
-					$parameters['sScrollY'] = "\"sScrollY\":\"{$js_options['datatables_scrolly']}\"";
+					$parameters['sScrollY'] = '"sScrollY":"' . preg_replace( '#[^0-9a-z.%]#', '', $js_options['datatables_scrolly'] ) . '"';
 					$parameters['bScrollCollapse'] = '"bScrollCollapse":true';
 				}
 				if ( ! empty( $js_options['datatables_custom_commands'] ) )
@@ -279,7 +285,7 @@ JS;
 		$shortcode_atts = apply_filters( 'tablepress_shortcode_table_shortcode_atts', $shortcode_atts );
 
 		// check, if a table with the given ID exists
-		$table_id = $shortcode_atts['id'];
+		$table_id = preg_replace( '/[^a-zA-Z0-9_-]/', '', $shortcode_atts['id'] );
 		if ( ! $this->model_table->table_exists( $table_id ) ) {
 			$message = "[table &#8220;{$table_id}&#8221; not found /]<br />\n";
 			$message = apply_filters( 'tablepress_table_not_found_message', $message, $table_id );
@@ -293,6 +299,10 @@ JS;
 			$message = apply_filters( 'tablepress_table_load_error_message', $message, $table_id );
 			return $message;
 		}
+
+		// Disable the "datatables_custom_commands" Shortcode parameter by default, for security reasons
+		if ( ! is_null( $shortcode_atts['datatables_custom_commands'] ) && apply_filters( 'tablepress_disable_custom_commands_shortcode_parameter', true ) )
+			$shortcode_atts['datatables_custom_commands'] = null;
 
 		// determine options to use (if set in Shortcode, use those, otherwise use stored options, i.e. "Edit Table" screen)
 		$render_options = array();
@@ -346,22 +356,25 @@ JS;
 
 		// check if table output shall and can be loaded from the transient cache, otherwise generate the output
 		if ( $render_options['cache_table_output'] && ! is_user_logged_in() ) {
-			$shortcode_hash = md5( json_encode( $shortcode_atts ) ); // hash the Shortcode attributes to get a unique cache identifier
-			$transient_name = 'tablepress_' . $shortcode_hash; // Attention: This string must not be longer than 45 characters!
+			$table_hash = md5( json_encode( $render_options ) ); // hash the Render Options array to get a unique cache identifier
+			$transient_name = 'tablepress_' . $table_hash; // Attention: This string must not be longer than 45 characters!
 			$output = get_transient( $transient_name );
-			if ( false === $output ) {
+			if ( false === $output || '' == $output ) {
 				// render/generate the table HTML, as it was not found in the cache
 				$_render->set_input( $table, $render_options );
 				$output = $_render->get_output();
 				// save output to a transient
-				set_transient( $transient_name, $output, 60*60*24 ); // store $output in a transient, set cache timeout to 24 hours
+				set_transient( $transient_name, $output, DAY_IN_SECONDS ); // store $output in a transient, set cache timeout to 24 hours
 				// update output caches list transient (necessary for cache invalidation upon table saving)
 				$caches_list_transient_name = 'tablepress_c_' . md5( $table_id );
 				$caches_list = get_transient( $caches_list_transient_name );
-				if ( ! is_array( $caches_list ) )
+				if ( false === $caches_list )
 					$caches_list = array();
-				$caches_list[ $transient_name ] = 1; // 1 is a dummy value
-				set_transient( $caches_list_transient_name, $caches_list, 60*60*24*2 );
+				else
+					$caches_list = json_decode( $caches_list, true );
+				if ( ! in_array( $transient_name, $caches_list ) )
+					$caches_list[] = $transient_name;
+				set_transient( $caches_list_transient_name, json_encode( $caches_list ), 2*DAY_IN_SECONDS );
 			} else {
 				$output .= apply_filters( 'tablepress_cache_hit_comment', "<!-- #{$render_options['html_id']} from cache -->" );
 			}
@@ -399,7 +412,7 @@ JS;
 			return $overwrite;
 
 		// check, if a table with the given ID exists
-		$table_id = $shortcode_atts['id'];
+		$table_id = preg_replace( '/[^a-zA-Z0-9_-]/', '', $shortcode_atts['id'] );
 		if ( ! $this->model_table->table_exists( $table_id ) ) {
 			$message = "[table &#8220;{$table_id}&#8221; not found /]<br />\n";
 			$message = apply_filters( 'tablepress_table_not_found_message', $message, $table_id );
@@ -414,8 +427,8 @@ JS;
 			return $message;
 		}
 
-		$field = $shortcode_atts['field'];
-		$format = $shortcode_atts['format'];
+		$field = preg_replace( '/[^a-z_]/', '', strtolower( $shortcode_atts['field'] ) );
+		$format = preg_replace( '/[^a-z]/', '', strtolower( $shortcode_atts['format'] ) );
 
 		// generate output, depending on what information (field) was asked for
 		switch ( $field ) {
@@ -435,7 +448,7 @@ JS;
 						$modified_timestamp = strtotime( $table['last_modified'] );
 						$current_timestamp = current_time( 'timestamp' );
 						$time_diff = $current_timestamp - $modified_timestamp;
-						if ( $time_diff >= 0 && $time_diff < 24*60*60 ) // time difference is only shown up to one day
+						if ( $time_diff >= 0 && $time_diff < DAY_IN_SECONDS ) // time difference is only shown up to one day
 							$output = sprintf( __( '%s ago', 'tablepress' ), human_time_diff( $modified_timestamp, $current_timestamp ) );
 						else
 							$output = TablePress::format_datetime( $table['last_modified'], 'mysql', '<br />' );
@@ -511,8 +524,9 @@ JS;
 		// load all tables, and remove hidden cells, as those will not be searched
 		// do this here once, so that we don't have to do it in each loop for each search term again
 		$search_tables = array();
-		$tables = $this->model_table->load_all();
+		$tables = $this->model_table->load_all(); // does not contain table data
 		foreach ( $tables as $table_id => $table ) {
+			$table = $this->model_table->load( $table_id ); // load table again, to also get table data
 			// load information about hidden rows and columns
 			$hidden_rows = array_keys( $table['visibility']['rows'], 0 ); // get indexes of hidden rows (array value of 0))
 			$hidden_columns = array_keys( $table['visibility']['columns'], 0 ); // get indexes of hidden columns (array value of 0))

@@ -80,12 +80,13 @@ abstract class TablePress_Controller {
 	 */
 	protected function plugin_update_check() {
 		// First activation or plugin update
-		if ( $this->model_options->get( 'plugin_options_db_version' ) < TablePress::db_version ) {
+		$current_plugin_options_db_version = $this->model_options->get( 'plugin_options_db_version' );
+		if ( $current_plugin_options_db_version < TablePress::db_version ) {
 			// Allow more PHP execution time for update process
 			@set_time_limit( 300 );
 
-			// Add TablePress capabilities to the WP_Roles objects
-			if ( $this->model_options->get( 'plugin_options_db_version' ) < 12 )
+			// Add TablePress capabilities to the WP_Roles objects, for new installations and all versions below 12
+			if ( $current_plugin_options_db_version < 12 )
 				$this->model_options->add_access_capabilities();
 
 			if ( 0 == $this->model_options->get( 'first_activation' ) ) {
@@ -95,7 +96,7 @@ abstract class TablePress_Controller {
 					'plugin_options_db_version' => TablePress::db_version
 				) );
 			} else {
-				// Update Plugin Options and Table Options, if necessary
+				// Update Plugin Options Options, if necessary
 				$this->model_options->merge_plugin_options_defaults();
 				$this->model_options->update( array(
 					'plugin_options_db_version' => TablePress::db_version,
@@ -103,6 +104,12 @@ abstract class TablePress_Controller {
 					'tablepress_version' => TablePress::version,
 					'message_plugin_update' => true
 				) );
+
+				// Clear table caches
+				if ( $current_plugin_options_db_version < 16 )
+					$this->model_table->invalidate_table_output_caches_tp09(); // for pre-0.9-RC, where the arrays are serialized and not JSON encoded
+				else
+					$this->model_table->invalidate_table_output_caches(); // for 0.9-RC and onwards
 			}
 
 			$this->model_options->update( array(
@@ -114,11 +121,11 @@ abstract class TablePress_Controller {
 		if ( $this->model_options->get( 'table_scheme_db_version' ) < TablePress::table_scheme_version ) {
 			// Convert parameter "datatables_scrollX" to "datatables_scrollx", has to be done before merge_table_options_defaults() is called!
 			if ( $this->model_options->get( 'table_scheme_db_version' ) < 3 )
-				$this->model_table->merge_table_options_tp09();
+				$this->model_table->merge_table_options_tp08();
 
 			$this->model_table->merge_table_options_defaults();
 
-			// Merge print_name/print_description changes made for 0.6-beta, @TODO: Remove in 1.0
+			// Merge print_name/print_description changes made for 0.6-beta
 			if ( $this->model_options->get( 'table_scheme_db_version' ) < 2 )
 				$this->model_table->merge_table_options_tp06();
 
