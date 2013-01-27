@@ -21,6 +21,15 @@ defined( 'ABSPATH' ) || die( 'No direct script access allowed!' );
 class TablePress_Edit_View extends TablePress_View {
 
 	/**
+	 * List of WP feature pointers for this view
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var array
+	 */
+	protected $wp_pointers = array( 'tp09_edit_drag_drop_sort' );
+
+	/**
 	 * Set up the view with data and do things that are specific for this view
 	 *
 	 * @since 1.0.0
@@ -43,7 +52,7 @@ class TablePress_Edit_View extends TablePress_View {
 		);
 		// Custom handling instead of $this->process_action_messages(). Also, $action_messages is used below.
 		if ( $data['message'] && isset( $action_messages[ $data['message'] ] ) ) {
-			$class = ( 'error' == substr( $data['message'], 0, 5 ) || in_array( $data['message'], array( 'success_save_error_id_change' ) ) ) ? 'error' : 'updated' ;
+			$class = ( 'error' == substr( $data['message'], 0, 5 ) || in_array( $data['message'], array( 'success_save_error_id_change' ), true ) ) ? 'error' : 'updated' ;
 			$this->add_header_message( "<strong>{$action_messages[ $data['message'] ]}</strong>", $class );
 		}
 
@@ -573,6 +582,21 @@ class TablePress_Edit_View extends TablePress_View {
 	 */
 	protected function help_tab_content() {
 		return 'Help for the Edit Table screen';
+	}
+
+	/**
+	 * Set the content for the WP feature pointer about the drag and drop and sort on the "Edit" screen
+	 *
+	 * @since 1.0.0
+	 */
+	public function wp_pointer_tp09_edit_drag_drop_sort() {
+		$content  = '<h3>' . __( 'TablePress Feature: Moving rows and columns', 'tablepress' ) . '</h3>';
+		$content .= '<p>' . __( 'Did you know? You can drag and drop rows and columns via the row number and the column title. And the arrows next to the column title can be used for sorting.', 'tablepress' ) . '</p>';
+
+		$this->admin_page->print_wp_pointer_js( 'tp09_edit_drag_drop_sort', '#edit-form-head', array(
+			'content'  => $content,
+			'position' => array( 'edge' => 'top', 'align' => 'left', 'offset' => '56 2' ),
+		) );
 	}
 
 } // class TablePress_Edit_View

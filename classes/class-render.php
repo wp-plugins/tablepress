@@ -275,7 +275,7 @@ class TablePress_Render {
 		// expand cell ranges (like A3:A6) to a list of single cells (like A3,A4,A5,A6)
 		if ( preg_match_all( '#([A-Z]+)([0-9]+):([A-Z]+)([0-9]+)#', $expression, $referenced_cell_ranges, PREG_SET_ORDER ) ) {
 			foreach ( $referenced_cell_ranges as $cell_range ) {
-				if ( in_array( $cell_range[0], $replaced_ranges ) )
+				if ( in_array( $cell_range[0], $replaced_ranges, true ) )
 					continue;
 
 				$replaced_ranges[] = $cell_range[0];
@@ -313,10 +313,10 @@ class TablePress_Render {
 		// parse and evaluate single cell references (like A3 or XY312), while prohibiting circle references
 		if ( preg_match_all( '#([A-Z]+)([0-9]+)#', $expression, $referenced_cells, PREG_SET_ORDER ) ) {
 			foreach ( $referenced_cells as $cell_reference ) {
-				if ( in_array( $cell_reference[0], $parents ) )
+				if ( in_array( $cell_reference[0], $parents, true ) )
 					return '!ERROR! Circle Reference';
 
-				if ( in_array( $cell_reference[0], $replaced_references ) )
+				if ( in_array( $cell_reference[0], $replaced_references, true ) )
 					continue;
 
 				$replaced_references[] = $cell_reference[0];
@@ -324,8 +324,8 @@ class TablePress_Render {
 				$ref_col = TablePress::letter_to_number( $cell_reference[1] ) - 1;
 				$ref_row = $cell_reference[2] - 1;
 
-				if ( ! ( isset( $this->table['data'][$ref_row] ) && isset( $this->table['data'][$ref_row][$ref_col] ) ) )
-					return '!ERROR! Non-existing Cell';
+				if ( ! isset( $this->table['data'][$ref_row] ) || ! isset( $this->table['data'][$ref_row][$ref_col] ) )
+					return "!ERROR! Cell {$cell_reference[0]} does not exist";
 
 				$ref_parents = $parents;
 				$ref_parents[] = $cell_reference[0];
@@ -334,9 +334,12 @@ class TablePress_Render {
 				// Bail if there was an error already
 				if ( false !== strpos( $result, '!ERROR!' ) )
 					return $result;
+				// Treat empty cells as 0
+				if ( '' == $result )
+					$result = 0;
 				// Bail if the cell does not result in a number (meaning it was a number or expression before being evaluated)
 				if ( ! is_numeric( $result ) )
-					return '!ERROR! ' . $cell_reference[0] . ' does not contain a number or expression';
+					return "!ERROR! {$cell_reference[0]} does not contain a number or expression";
 
 				$expression = preg_replace( '#(?<![A-Z])' . preg_quote( $cell_reference[0], '#' ) . '(?![0-9])#', $result, $expression );
 			}
@@ -373,7 +376,7 @@ class TablePress_Render {
 
 		// check if there are rows and columns in the table (might not be the case after removing hidden rows/columns!)
 		if ( 0 === $num_rows || 0 === $num_columns ) {
-			$this->output = sprintf( __( '<!-- The table with the ID %s is empty! -->', 'tablepress' ), $this->table['id'] ); // @TODO: Maybe use a more meaningful output here?
+			$this->output = sprintf( __( '<!-- The table with the ID %s is empty! -->', 'tablepress' ), $this->table['id'] );
 			return;
 		}
 

@@ -21,15 +21,6 @@ defined( 'ABSPATH' ) || die( 'No direct script access allowed!' );
 class TablePress_Options_View extends TablePress_View {
 
 	/**
-	 * List of WP feature pointers for this view
-	 *
-	 * @since 1.0.0
-	 *
-	 * @var array
-	 */
-	// protected $wp_pointers = array( 'tp100_custom_css' ); // @TODO: Temporarily disabled
-
-	/**
 	 * Set up the view with data and do things that are specific for this view
 	 *
 	 * @since 1.0.0
@@ -105,9 +96,14 @@ class TablePress_Options_View extends TablePress_View {
 				printf( __( 'You can get styling examples from the <a href="%s">FAQ</a>.', 'tablepress' ), 'http://tablepress.org/faq/' );
 				echo ' ';
 				printf( __( 'Information on available CSS selectors can be found in the <a href="%s">documentation</a>.', 'tablepress' ), 'http://tablepress.org/documentation/' );
+				echo ' ';
+				_e( 'Please note that invalid CSS code will be stripped, if it can not be corrected automatically.', 'tablepress' );
 			?></p>
-			<label for="option-use-custom-css-file"><input type="checkbox" id="option-use-custom-css-file" name="options[use_custom_css_file]" value="true"<?php checked( $data['frontend_options']['use_custom_css_file'] ); ?> /> <?php _e( 'Use a file for storing and loading the &#8220;Custom CSS&#8221; code.', 'tablepress' ); ?> <?php _e( '<span class="description">(recommended)</span>', 'tablepress' ); ?></label><br />
-			<input type="checkbox" style="visibility: hidden;" <?php // Dummy checkbox for space alignment ?>/> <?php echo content_url( 'tablepress-custom.css' ) . ' ' . ( ( $data['frontend_options']['custom_css_file_exists'] ) ? '(File exists.)' : '(File seems not to exist.)' ); ?>
+			<?php
+				$file_abbr = content_url( 'tablepress-custom.css' ) . ' (' . ( ( $data['frontend_options']['custom_css_file_exists'] ) ? __( 'File exists', 'tablepress' ) : __( 'File seems not to exist', 'tablepress' ) ) . ')';
+			?>
+			<br />
+			<label for="option-use-custom-css-file" title="<?php echo esc_attr( $file_abbr ); ?>"><input type="checkbox" id="option-use-custom-css-file" name="options[use_custom_css_file]" value="true"<?php checked( $data['frontend_options']['use_custom_css_file'] ); ?> /> <?php _e( 'Use a file for storing and loading the &#8220;Custom CSS&#8221; code.', 'tablepress' ); ?> <?php _e( '<span class="description">(recommended)</span>', 'tablepress' ); ?></label>
 		</td>
 	</tr>
 </tbody>
@@ -179,21 +175,6 @@ class TablePress_Options_View extends TablePress_View {
 	 */
 	protected function help_tab_content() {
 		return 'Help for the Plugin Options screen';
-	}
-
-	/**
-	 * Set the content for the WP feature pointer about the TablePress nav bar
-	 *
-	 * @since 1.0.0
-	 */
-	public function wp_pointer_tp100_custom_css() {
-		$content  = '<h3>' . __( 'TablePress Feature: Custom CSS', 'tablepress' ) . '</h3>';
-		$content .= '<p>' .	 __( 'This is the &#8220;Custom CSS&#8221; textarea where CSS code for table styling should be entered.', 'tablepress' ) . '</p>';
-
-		$this->admin_page->print_wp_pointer_js( 'tp100_custom_css', '.CodeMirror', array(
-			'content'  => $content,
-			'position' => array( 'edge' => 'right', 'align' => 'center', 'offset' => '-16 0', 'defer_loading' => true ),
-		) );
 	}
 
 } // class TablePress_Options_View

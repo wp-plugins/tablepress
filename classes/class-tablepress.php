@@ -27,7 +27,7 @@ abstract class TablePress {
 	 *
 	 * @const string
 	 */
-	const version = '0.8.1-beta';
+	const version = '0.9-RC';
 
 	/**
 	 * TablePress internal plugin version ("options scheme" version)
@@ -38,7 +38,7 @@ abstract class TablePress {
 	 *
 	 * @const int
 	 */
-	const db_version = 16;
+	const db_version = 17;
 
 	/**
 	 * TablePress "table scheme" (data format structure) version
@@ -329,9 +329,9 @@ abstract class TablePress {
 			// top-level parent page needs special treatment for better action strings
 			if ( self::$controller->is_top_level_page ) {
 				$target = 'admin.php';
-				if ( in_array( $params['action'], array( 'add', 'import', 'export', 'options', 'about' ) ) )
+				if ( in_array( $params['action'], array( 'add', 'import', 'export', 'options', 'about' ), true ) )
 					$params['page'] .= '_' . $params['action'];
-				if ( in_array( $params['action'], array( 'list', 'add', 'import', 'export', 'options', 'about' ) ) )
+				if ( in_array( $params['action'], array( 'list', 'add', 'import', 'export', 'options', 'about' ), true ) )
 					$params['action'] = false;
 			} else {
 				$target = self::$controller->parent_page;

@@ -30,15 +30,6 @@ class TablePress_List_View extends TablePress_View {
 	protected $wp_list_table;
 
 	/**
-	 * List of WP feature pointers for this view
-	 *
-	 * @since 1.0.0
-	 *
-	 * @var array
-	 */
-	// protected $wp_pointers = array( 'tp100_navbar' ); // @TODO: Temporarily disabled
-
-	/**
 	 * Set up the view with data and do things that are specific for this view
 	 *
 	 * @since 1.0.0
@@ -71,7 +62,7 @@ class TablePress_List_View extends TablePress_View {
 				'<strong><em>' . __( 'Attention!', 'tablepress' ) . '</em></strong><br />'
 				. __( 'You have activated the plugin WP-Table Reloaded, which can not be used together with TablePress.', 'tablepress' ) . '<br />'
 				. __( 'It is strongly recommended that you switch from WP-Table Reloaded to TablePress, which not only fixes many problems, but also has more and better features than WP-Table Reloaded.', 'tablepress' ) . '<br />'
-				. sprintf( __( 'Please follow the <a href="%s" title"Migration Guide from WP-Table Reloaded to TablePress">migration guide</a> to move your tables and then deactivate WP-Table Reloaded!', 'tablepress' ), 'http://tablepress.org/migration-from-wp-table-reloaded/' ) . '<br />'
+				. sprintf( __( 'Please follow the <a href="%s">migration guide</a> to move your tables and then deactivate WP-Table Reloaded!', 'tablepress' ), 'http://tablepress.org/migration-from-wp-table-reloaded/' ) . '<br />'
 				. '<a href="' . TablePress::url( array( 'action' => 'import' ) ) . '" class="button button-primary button-large" title="' . __( 'Import your tables from WP-Table Reloaded', 'tablepress' ) . '" style="color:#ffffff;margin-top:5px;">' . __( 'Import your tables from WP-Table Reloaded', 'tablepress' ) . '</a>',
 				'error'
 			);
@@ -245,21 +236,6 @@ class TablePress_List_View extends TablePress_View {
 	 */
 	protected function help_tab_content() {
 		return 'Help for the List Tables screen';
-	}
-
-	/**
-	 * Set the content for the WP feature pointer about the TablePress nav bar
-	 *
-	 * @since 1.0.0
-	 */
-	public function wp_pointer_tp100_navbar() {
-		$content  = '<h3>' . __( 'TablePress Feature: Navigation', 'tablepress' ) . '</h3>';
-		$content .= '<p>' .	 __( 'Add a new table to get started!', 'tablepress' ) . '</p>';
-
-		$this->admin_page->print_wp_pointer_js( 'tp100_navbar', '#tablepress-nav', array(
-			'content'  => $content,
-			'position' => array( 'edge' => 'top', 'align' => 'left', 'offset' => '250 0' ),
-		) );
 	}
 
 } // class TablePress_List_View
