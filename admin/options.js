@@ -30,6 +30,7 @@ jQuery(document).ready( function($) {
 		var $this = $(this);
 		if ( ! $this.hasClass( 'disabled' ) ) {
 			$this.addClass( 'large' );
+			CM_custom_css.refresh();
 			$this.off( 'mousedown.codemirror' );
 		}
 	} );
@@ -54,5 +55,17 @@ jQuery(document).ready( function($) {
 	$( '#tablepress-page' ).on( 'submit', 'form', function() {
 		$(this).find( 'input, select, textarea' ).prop( 'disabled', false );
 	} );
+
+	/**
+	 * Require double confirmation when wanting to uninstall TablePress
+	 *
+	 * @since 1.0.0
+	 */
+    $( '#uninstall-tablepress' ).on( 'click', function() {
+        if ( confirm( tablepress_strings.uninstall_warning_1 ) )
+            return confirm( tablepress_strings.uninstall_warning_2 );
+        else
+            return false;
+    } );
 
 } );

@@ -80,7 +80,21 @@ class TablePress_WP_User_Option extends TablePress_WP_Option {
 		if ( ! is_user_logged_in() )
 			return false;
 
-		return delete_option( get_current_user_id(), $option_name, false );
+		return delete_user_option( get_current_user_id(), $option_name, false );
+	}
+
+	/**
+	 * Delete a WP User Option with the WP API, for all users of the site
+	 *
+	 * @since 1.0.0
+	 * @uses delete_user_option()
+	 */
+	public function delete_for_all_users() {
+		$users = get_users();
+		foreach ( $users as $user ) {
+			delete_user_option( $user->ID, $this->option_name, false );
+			// @TODO: Add other user options for different actions as well
+		}
 	}
 
 } // class TablePress_WP_User_Option

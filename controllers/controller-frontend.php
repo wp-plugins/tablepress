@@ -65,8 +65,8 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 	 */
 	public function init_shortcodes() {
 		// Remove previously registered [table /] Shortcodes (e.g. from WP-Table Reloaded), as these would otherwise be used instead of TablePress's Shortcodes
-		remove_shortcode( 'table' );
-		remove_shortcode( 'table-info' );
+		remove_shortcode( TablePress::$shortcode );
+		remove_shortcode( TablePress::$shortcode_info );
 		// Dequeue WP-Table Relaoded Default CSS, as it can influence TablePress table styling
 		if ( isset( $GLOBALS['WP_Table_Reloaded_Frontend'] ) )
 			remove_action( 'wp_head', array( $GLOBALS['WP_Table_Reloaded_Frontend'], 'add_frontend_css' ) );
@@ -84,8 +84,9 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 		// add "Default CSS"
 		$use_default_css = apply_filters( 'tablepress_use_default_css', true );
 		if ( $use_default_css ) {
+			$rtl = ( is_rtl() ) ? '-rtl' : '';
 			$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
-			$default_css_url = plugins_url( "css/default{$suffix}.css", TABLEPRESS__FILE__ );
+			$default_css_url = plugins_url( "css/default{$rtl}{$suffix}.css", TABLEPRESS__FILE__ );
 			$default_css_url = apply_filters( 'tablepress_default_css_url', $default_css_url );
 			wp_enqueue_style( 'tablepress-default', $default_css_url, array(), TablePress::version );
 		}
@@ -98,16 +99,15 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 				$custom_css_file_contents = '';
 				if ( ! defined( 'SCRIPT_DEBUG' ) || ! SCRIPT_DEBUG ) {
 					$custom_css_file_contents = $this->model_options->load_custom_css_from_file( 'minified' );
-					$custom_css_file = 'tablepress-custom.min.css';
+					$custom_css_file_type = 'minified';
 				}
 				if ( empty( $custom_css_file_contents ) ) {
 					$custom_css_file_contents = $this->model_options->load_custom_css_from_file( 'normal' );
-					$custom_css_file = 'tablepress-custom.css';
+					$custom_css_file_type = 'normal';
 				}
 				if ( ! empty( $custom_css_file_contents ) ) {
 					$print_custom_css_inline = false;
-					$custom_css_url = content_url( $custom_css_file );
-					$custom_css_url = apply_filters( 'tablepress_custom_css_url', $custom_css_url, $custom_css_file );
+					$custom_css_url = $this->model_options->get_custom_css_location( $custom_css_file_type, 'url' );
 					$custom_css_dependencies = array();
 					if ( $use_default_css )
 						$custom_css_dependencies[] = 'tablepress-default'; // if default CSS is desired, but also handled internally
@@ -178,8 +178,7 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 				// Settle dependencies/conflicts between certain features
 				if ( false !== $js_options['datatables_scrolly'] ) // not necessarily a boolean!
 					$js_options['datatables_paginate'] = false; // vertical scrolling and pagination don't work together
-				if ( ! $js_options['datatables_paginate'] )
-					$js_options['datatables_paginate_entries'] = false; // Pagination is required for the initial value to be set
+				$js_options['datatables_paginate_entries'] = intval( $js_options['datatables_paginate_entries'] ); // Sanitize, as it may come from Shortcode attribute
 
 				// DataTables language/translation handling
 				$datatables_locale = apply_filters( 'tablepress_datatables_locale', $js_options['datatables_locale'], $table_id );
@@ -202,12 +201,22 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 				// the following options are activated by default, so we only need to "false" them if we don't want them, but don't need to "true" them if we do
 				if ( ! $js_options['datatables_sort'] )
 					$parameters['bSort'] = '"bSort":false';
-				if ( ! $js_options['datatables_paginate'] )
+				if ( $js_options['datatables_paginate'] ) {
+					if ( $js_options['datatables_lengthchange'] ) {
+						$length_menu = array( 10, 25, 50, 100 );
+						if ( ! in_array( $js_options['datatables_paginate_entries'], $length_menu, true ) ) {
+							$length_menu[] = $js_options['datatables_paginate_entries'];
+							sort( $length_menu, SORT_NUMERIC );
+							$parameters['aLengthMenu'] = '"aLengthMenu":[' . implode( ',', $length_menu ) . ']';
+						}
+					} else {
+						$parameters['bLengthChange'] = '"bLengthChange":false';
+					}
+					if ( 10 != $js_options['datatables_paginate_entries'] )
+						$parameters['iDisplayLength'] = '"iDisplayLength":'. $js_options['datatables_paginate_entries'];
+				} else {
 					$parameters['bPaginate'] = '"bPaginate":false';
-				if ( ! empty( $js_options['datatables_paginate_entries'] ) && 10 != $js_options['datatables_paginate_entries'] )
-					$parameters['iDisplayLength'] = '"iDisplayLength":'. intval( $js_options['datatables_paginate_entries'] );
-				if ( ! $js_options['datatables_lengthchange'] )
-					$parameters['bLengthChange'] = '"bLengthChange":false';
+				}
 				if ( ! $js_options['datatables_filter'] )
 					$parameters['bFilter'] = '"bFilter":false';
 				if ( ! $js_options['datatables_info'] )
@@ -223,9 +232,9 @@ class TablePress_Frontend_Controller extends TablePress_Controller {
 
 				$parameters = apply_filters( 'tablepress_datatables_parameters', $parameters, $table_id, $html_id, $js_options );
 
-				// if "aaSorting", "bSortClasses", or "asStripeClasses" are set in "Custom Commands", remove their default value
+				// if an existing parameter is set in "Custom Commands", remove their default value
 				if ( isset( $parameters['custom_commands'] ) ) {
-					foreach ( array( 'aaSorting', 'bSortClasses', 'asStripeClasses' ) as $maybe_overwritten_parameter ) {
+					foreach ( array_keys( $parameters ) as $maybe_overwritten_parameter ) {
 						if ( false !== strpos( $parameters['custom_commands'], $maybe_overwritten_parameter ) )
 							unset( $parameters[ $maybe_overwritten_parameter ] );
 					}
@@ -441,9 +450,6 @@ JS;
 					case 'raw':
 						$output = $table['last_modified'];
 						break 2;
-					case 'mysql':
-						$output = TablePress::format_datetime( $table['last_modified'], 'mysql', ' ' );
-						break 2;
 					case 'human':
 						$modified_timestamp = strtotime( $table['last_modified'] );
 						$current_timestamp = current_time( 'timestamp' );
@@ -453,8 +459,10 @@ JS;
 						else
 							$output = TablePress::format_datetime( $table['last_modified'], 'mysql', '<br />' );
 						break 2;
+					case 'mysql':
 					default:
 						$output = TablePress::format_datetime( $table['last_modified'], 'mysql', ' ' );
+						break 2;
 				}
 				break;
 			case 'last_editor':
@@ -463,9 +471,21 @@ JS;
 			case 'author':
 				$output = TablePress::get_user_display_name( $table['author'] );
 				break;
+			case 'number_rows':
+				$output = count( $table['data'] );
+				if ( 'raw' != $format ) {
+					if ( $table['options']['table_head'] )
+						$output = $output - 1;
+					if ( $table['options']['table_foot'] )
+						$output = $output - 1;
+				}
+				break;
+			case 'number_columns':
+				$output = count( $table['data'][0] );
+				break;
 			default:
-					$output = "[table-info field &#8220;{$field}&#8221; not found in table &#8220;{$table_id}&#8221; /]<br />\n";
-					$output = apply_filters( 'tablepress_table_info_not_found_message', $output, $table, $field, $format );
+				$output = "[table-info field &#8220;{$field}&#8221; not found in table &#8220;{$table_id}&#8221; /]<br />\n";
+				$output = apply_filters( 'tablepress_table_info_not_found_message', $output, $table, $field, $format );
 		}
 
 		$output = apply_filters( 'tablepress_shortcode_table_info_output', $output, $table, $shortcode_atts );

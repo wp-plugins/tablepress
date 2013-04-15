@@ -152,8 +152,9 @@ class TablePress_Import {
 		}
 
 		libxml_use_internal_errors( true ); // no warnings/errors raised, but stored internally
-		$dom = new DOMDocument();
+		$dom = new DOMDocument( '1.0', 'UTF-8' );
 		$dom->strictErrorChecking = false; // no strict checking for invalid HTML
+		$temp_data = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . $temp_data; // Prepend XML declaration, for better encoding support
 		$dom->loadHTML( $temp_data );
 		if ( false === $dom ) {
 			$this->imported_table = false;
@@ -168,7 +169,7 @@ class TablePress_Import {
 		$errors = libxml_get_errors();
 		libxml_clear_errors();
 		if ( ! empty( $errors ) ) {
-			$output = '<b>' . __( 'The imported file contains errors:', 'tablepress' ) . '</b><br /><br />';
+			$output = '<strong>' . __( 'The imported file contains errors:', 'tablepress' ) . '</strong><br /><br />';
 			foreach ( $errors as $error ) {
 				switch ( $error->level ) {
 					case LIBXML_ERR_WARNING:
@@ -182,7 +183,7 @@ class TablePress_Import {
 						break;
 				}
 			}
-			wp_die( $output, 'Import Error', array( 'back_link' => true ) );
+			wp_die( $output, 'Import Error', array( 'response' => 200, 'back_link' => true ) );
 		}
 
 		$table = $table_html->body->table;
@@ -264,7 +265,7 @@ class TablePress_Import {
 	 * @param array $array Two-dimensional array to be padded
 	 * @return array Padded array
 	 */
-	protected function pad_array_to_max_cols( $array ) {
+	public function pad_array_to_max_cols( $array ) {
 		$rows = count( $array );
 		$rows = ( $rows > 0 ) ? $rows : 1;
 		$max_columns = $this->count_max_columns( $array );

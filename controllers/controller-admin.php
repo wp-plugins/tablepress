@@ -131,7 +131,7 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 	public function add_admin_actions() {
 		// register the callbacks for processing action requests
 		$post_actions = array( 'list', 'add', 'edit', 'options', 'export', 'import' );
-		$get_actions = array( 'hide_message', 'delete_table', 'copy_table', 'preview_table', 'editor_button_thickbox' );
+		$get_actions = array( 'hide_message', 'delete_table', 'copy_table', 'preview_table', 'editor_button_thickbox', 'uninstall_tablepress' );
 		foreach ( $post_actions as $action ) {
 			add_action( "admin_post_tablepress_{$action}", array( $this, "handle_post_action_{$action}" ) );
 		}
@@ -356,6 +356,7 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 				$data['frontend_options']['use_custom_css'] = $this->model_options->get( 'use_custom_css' );
 				$data['frontend_options']['use_custom_css_file'] = $this->model_options->get( 'use_custom_css_file' );
 				$data['frontend_options']['custom_css'] = $this->model_options->load_custom_css_from_file( 'normal' );
+				$data['frontend_options']['custom_css_url'] = $this->model_options->get_custom_css_location( 'normal', 'url' );
 				$data['frontend_options']['custom_css_file_exists'] = ( false !== $data['frontend_options']['custom_css'] );
 				if ( $data['frontend_options']['use_custom_css_file'] ) {
 					// fall back to "Custom CSS" in options, if it could not be retrieved from file
@@ -402,8 +403,8 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 				$data['html_import_support_available'] = $importer->html_import_support_available;
 				$data['import_formats'] = $importer->import_formats;
 				$data['import_format'] = ( ! empty( $_GET['import_format'] ) ) ? $_GET['import_format'] : false;
-				$data['import_add_replace'] = ( ! empty( $_GET['import_add_replace'] ) ) ? $_GET['import_add_replace'] : 'add';
-				$data['import_replace_table'] = ( ! empty( $_GET['import_replace_table'] ) ) ? $_GET['import_replace_table'] : false;
+				$data['import_type'] = ( ! empty( $_GET['import_type'] ) ) ? $_GET['import_type'] : 'add';
+				$data['import_existing_table'] = ( ! empty( $_GET['import_existing_table'] ) ) ? $_GET['import_existing_table'] : false;
 				$data['import_source'] = ( ! empty( $_GET['import_source'] ) ) ? $_GET['import_source'] : 'file-upload';
 				$data['import_url'] = ( ! empty( $_GET['import_url'] ) ) ? $_GET['import_url'] : 'http://';
 				$data['import_server'] = ( ! empty( $_GET['import_server'] ) ) ? $_GET['import_server'] : ABSPATH;
@@ -471,6 +472,11 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 				'name' => __( 'French', 'tablepress' ),
 				'translator_name' => 'Loïc Herry',
 				'translator_url' => 'http://www.lherry.fr/'
+			),
+			'pl_PL' => array(
+				'name' => __( 'Polish', 'tablepress' ),
+				'translator_name' => 'Kuba Mikita',
+				'translator_url' => 'http://www.wpart.pl/'
 			),
 			'sk_SK' => array(
 				'name' => __( 'Slovak', 'tablepress' ),
@@ -1057,16 +1063,16 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 	 * @param array $import Submitted form data
 	 */
 	protected function _import_tablepress_regular( $import ) {
-		if ( ! isset( $import['add_replace'] ) )
-			$import['add_replace'] = 'add';
-		if ( ! isset( $import['replace_table'] ) )
-			$import['replace_table'] = '';
+		if ( ! isset( $import['type'] ) )
+			$import['type'] = 'add';
+		if ( ! isset( $import['existing_table'] ) )
+			$import['existing_table'] = '';
 		if ( ! isset( $import['source'] ) )
 			$import['source'] = '';
 
-		// Check if a table to replace was selected
-		if ( 'replace' == $import['add_replace'] && empty( $import['replace_table'] ) )
-			TablePress::redirect( array( 'action' => 'import', 'message' => 'error_import_no_replace_id', 'import_format' => $import['format'], 'import_add_replace' => 'replace', 'import_source' => $import['source'] ) );
+		// Check if a table to replace or append to was selected
+		if ( in_array( $import['type'], array( 'replace', 'append' ), true ) && empty( $import['existing_table'] ) )
+			TablePress::redirect( array( 'action' => 'import', 'message' => 'error_import_no_existing_id', 'import_format' => $import['format'], 'import_type' => $import['type'], 'import_source' => $import['source'] ) );
 
 		$import_error = true;
 		$unlink_file = false;
@@ -1112,7 +1118,7 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 		if ( $import_error ) {
 			if ( $unlink_file )
 				@unlink( $import_data['file_location'] );
-			TablePress::redirect( array( 'action' => 'import', 'message' => 'error_import_source_invalid', 'import_format' => $import['format'], 'import_add_replace' => $import['add_replace'], 'import_replace_table' => $import['replace_table'], 'import_source' => $import['source'] ) );
+			TablePress::redirect( array( 'action' => 'import', 'message' => 'error_import_source_invalid', 'import_format' => $import['format'], 'import_type' => $import['type'], 'import_existing_table' => $import['existing_table'], 'import_source' => $import['source'] ) );
 		}
 
 		$this->importer = TablePress::load_class( 'TablePress_Import', 'class-import.php', 'classes' );
@@ -1121,7 +1127,7 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 			if ( ! $this->importer->zip_support_available ) { // determine if ZIP file support is available
 				if ( $unlink_file )
 					@unlink( $import_data['file_location'] );
-				TablePress::redirect( array( 'action' => 'import', 'message' => 'error_no_zip_import', 'import_format' => $import['format'], 'import_add_replace' => $import['add_replace'], 'import_replace_table' => $import['replace_table'], 'import_source' => $import['source'] ) );
+				TablePress::redirect( array( 'action' => 'import', 'message' => 'error_no_zip_import', 'import_format' => $import['format'], 'import_type' => $import['type'], 'import_existing_table' => $import['existing_table'], 'import_source' => $import['source'] ) );
 			}
 			$import_zip = true;
 		} else {
@@ -1136,8 +1142,8 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 
 			$name = $import_data['file_name'];
 			$description = $import_data['file_name'];
-			$replace_id = ( 'replace' == $import['add_replace'] && ! empty( $import['replace_table'] ) ) ? $import['replace_table'] : false;
-			$table_id = $this->_import_tablepress_table( $import['format'], $import_data['data'], $name, $description, $replace_id );
+			$existing_table_id = ( in_array( $import['type'], array( 'replace', 'append' ), true ) && ! empty( $import['existing_table'] ) ) ? $import['existing_table'] : false;
+			$table_id = $this->_import_tablepress_table( $import['format'], $import_data['data'], $name, $description, $existing_table_id, $import['type'] );
 
 			if ( $unlink_file )
 				@unlink( $import_data['file_location'] );
@@ -1171,8 +1177,8 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 
 				$name = $file_name;
 				$description = $file_name;
-				$replace_id = ( 'replace' == $import['add_replace'] ) ? false : false; // @TODO: Find a way to extract the replace ID from the filename, maybe?
-				$table_id = $this->_import_tablepress_table( $import['format'], $data, $name, $description, $replace_id );
+				$existing_table_id = ( in_array( $import['type'], array( 'replace', 'append' ), true ) ) ? false : false; // @TODO: Find a way to extract the replace/append ID from the filename, maybe?
+				$table_id = $this->_import_tablepress_table( $import['format'], $data, $name, $description, $existing_table_id, 'add' );
 				if ( false === $table_id )
 					continue;
 				else
@@ -1202,38 +1208,59 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 	 * @param array $data Data to import
 	 * @param string $name Name of the table
 	 * @param string $description Description of the table
-	 * @param bool|string $replace_id False if table shall be added new, ID of the table to be replaced otherwise
+	 * @param bool|string $existing_table_id False if table shall be added new, ID of the table to be replaced or appended to otherwise
+	 * @param string $import_type What to do with the imported data: "add", "replace", "append"
 	 * @return bool|string False on error, table ID on success
 	 */
-	protected function _import_tablepress_table( $format, $data, $name, $description, $replace_id ) {
+	protected function _import_tablepress_table( $format, $data, $name, $description, $existing_table_id, $import_type ) {
 		$imported_table = $this->importer->import_table( $format, $data );
 		if ( false === $imported_table )
 			return false;
 
-		// to be able to replace a table, editing that table must be allowed
-		if ( false !== $replace_id && ! current_user_can( 'tablepress_edit_table', $replace_id ) )
+		if ( false === $existing_table_id )
+			$import_type = 'add';
+
+		// to be able to replace or append to a table, editing that table must be allowed
+		if ( in_array( $import_type, array( 'replace', 'append' ), true ) && ! current_user_can( 'tablepress_edit_table', $existing_table_id ) )
 			return false;
 
 		// Full JSON format table can contain a table ID, try to keep that
 		$table_id_in_import = false;
 
-		if ( false !== $replace_id ) {
-			// Load existing table from DB
-			$existing_table = $this->model_table->load( $replace_id );
-			if ( false === $existing_table )
+		switch ( $import_type ) {
+			case 'add':
+				$existing_table = $this->model_table->get_table_template();
+				// if name and description are imported from a new table, use those
+				if ( isset( $imported_table['id'] ) )
+					$table_id_in_import = $imported_table['id'];
+				if ( ! isset( $imported_table['name'] ) )
+					$imported_table['name'] = $name;
+				if ( ! isset( $imported_table['description'] ) )
+					$imported_table['description'] = $description;
+				break;
+			case 'replace':
+				// Load existing table from DB
+				$existing_table = $this->model_table->load( $existing_table_id );
+				if ( false === $existing_table )
+					return false;
+				// don't change name and description when a table is replaced
+				$imported_table['name'] = $existing_table['name'];
+				$imported_table['description'] = $existing_table['description'];
+				break;
+			case 'append':
+				// Load existing table from DB
+				$existing_table = $this->model_table->load( $existing_table_id );
+				if ( false === $existing_table )
+					return false;
+				// don't change name and description when a table is appended to
+				$imported_table['name'] = $existing_table['name'];
+				$imported_table['description'] = $existing_table['description'];
+				// Actual appending:
+				$imported_table['data'] = array_merge( $existing_table['data'], $imported_table['data'] );
+				$imported_table['data'] = $this->importer->pad_array_to_max_cols( $imported_table['data'] );
+				break;
+			default:
 				return false;
-			// don't change name and description when a table is replaced
-			$imported_table['name'] = $existing_table['name'];
-			$imported_table['description'] = $existing_table['description'];
-		} else {
-			$existing_table = $this->model_table->get_table_template();
-			// if name and description are imported from a new table, use those
-			if ( isset( $imported_table['id'] ) )
-				$table_id_in_import = $imported_table['id'];
-			if ( ! isset( $imported_table['name'] ) )
-				$imported_table['name'] = $name;
-			if ( ! isset( $imported_table['description'] ) )
-				$imported_table['description'] = $description;
 		}
 
 		// Merge new or existing table with information from the imported table
@@ -1256,8 +1283,8 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 			$table['options']['datatables_custom_commands'] = $existing_table['options']['datatables_custom_commands'];
 
 		// Replace existing table or add new table
-		if ( false !== $replace_id )
-			$table_id = $this->model_table->save( $table ); // Replace existing table with imported table
+		if ( in_array( $import_type, array( 'replace', 'append' ), true ) )
+			$table_id = $this->model_table->save( $table ); // Replace existing table with imported/appended table
 		else
 			$table_id = $this->model_table->add( $table ); // Add the imported table (and get its first ID)
 
@@ -1286,13 +1313,17 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 		if ( false === get_option( 'wp_table_reloaded_options', false ) || false === get_option( 'wp_table_reloaded_tables', false ) )
 			TablePress::redirect( array( 'action' => 'import', 'message' => 'error_wp_table_reloaded_not_installed' ) );
 
+		$wp_table_reloaded_options = get_option( 'wp_table_reloaded_options', false );
+		if ( empty( $wp_table_reloaded_options ) )
+			$wp_table_reloaded_options = array();
+
 		// Import WP-Table Reloaded tables
 		$not_imported_tables = $imported_tables = $imported_other_id_tables = array();
 		if ( $import_tables ) {
 			$wp_table_reloaded_tables_list = get_option( 'wp_table_reloaded_tables', array() );
 			foreach ( $wp_table_reloaded_tables_list as $wptr_table_id => $table_option_name ) {
 				$wptr_table = get_option( $table_option_name, false );
-				$import_status = $this->_import_wp_table_reloaded_table( $wptr_table );
+				$import_status = $this->_import_wp_table_reloaded_table( $wptr_table, $wp_table_reloaded_options );
 				switch ( $import_status ) {
 					case 0:
 						$not_imported_tables[] = $wptr_table_id;
@@ -1309,11 +1340,8 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 
 		// Import WP-Table Reloaded Plugin Options (currently only CSS related options)
 		$imported_css = false;
-		if ( $import_css ) {
-			$wp_table_reloaded_options = get_option( 'wp_table_reloaded_options', false );
-			if ( ! empty( $wp_table_reloaded_options ) )
-				$imported_css = $this->_import_wp_table_reloaded_plugin_options( $wp_table_reloaded_options );
-		}
+		if ( $import_css )
+			$imported_css = $this->_import_wp_table_reloaded_plugin_options( $wp_table_reloaded_options );
 
 		// @TODO: Better handling of the different cases of imported/imported-without-ID-change/not-imported tables
 		if ( count( $imported_tables ) > 1 )
@@ -1346,12 +1374,14 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 			@unlink( $_FILES['import_wp_table_reloaded_file_upload']['tmp_name'] );
 			TablePress::redirect( array( 'action' => 'import', 'message' => 'error_wp_table_reloaded_dump_file' ) );
 		}
+		if ( empty( $dump_file['options'] ) )
+			$dump_file['options'] = array();
 
 		// Import WP-Table Reloaded tables
 		$not_imported_tables = $imported_tables = $imported_other_id_tables = array();
 		if ( $import_tables && ! empty( $dump_file['tables'] ) ) {
 			foreach ( $dump_file['tables'] as $wptr_table_id => $wptr_table ) {
-				$import_status = $this->_import_wp_table_reloaded_table( $wptr_table );
+				$import_status = $this->_import_wp_table_reloaded_table( $wptr_table, $dump_file['options'] );
 				switch ( $import_status ) {
 					case 0:
 						$not_imported_tables[] = $wptr_table_id;
@@ -1368,7 +1398,7 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 
 		// Import WP-Table Reloaded Plugin Options (currently only CSS related options)
 		$imported_css = false;
-		if ( $import_css && ! empty( $dump_file['options'] ) )
+		if ( $import_css )
 			$imported_css = $this->_import_wp_table_reloaded_plugin_options( $dump_file['options'] );
 
 		@unlink( $_FILES['import_wp_table_reloaded_file_upload']['tmp_name'] );
@@ -1391,9 +1421,10 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 	 * @since 1.0.0
 	 *
 	 * @param array $wptr_table WP-Table Reloaded table
+	 * @param array $wp_table_reloaded_options WP-Table Reloaded Plugin Options
 	 * @return int Import status: 0=Import failed; 1=Imported with ID change; 2=Imported without ID change
 	 */
-	protected function _import_wp_table_reloaded_table( $wptr_table ) {
+	protected function _import_wp_table_reloaded_table( $wptr_table, $wp_table_reloaded_options ) {
 		if ( empty( $wptr_table ) )
 			return 0; // Import failed
 
@@ -1430,12 +1461,18 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 			$new_table['options']['table_foot'] = $wptr_table['options']['table_footer'];
 		if ( isset( $wptr_table['options']['custom_css_class'] ) )
 			$new_table['options']['extra_css_classes'] = $wptr_table['options']['custom_css_class'];
+		if ( isset( $wptr_table['options']['use_tablesorter'] ) && isset( $wp_table_reloaded_options['enable_tablesorter'] ) ) {
+			if ( $wp_table_reloaded_options['enable_tablesorter'] )
+				$new_table['options']['use_datatables'] = $wptr_table['options']['use_tablesorter'];
+			else
+				$new_table['options']['use_datatables'] = false;
+		}
 		// array key is the same in both plugins for the following options
 		foreach ( array( 'alternating_row_colors', 'row_hover',
 			'print_name', 'print_name_position', 'print_description', 'print_description_position',
-			'use_datatables', 'datatables_sort',  'datatables_filter', 'datatables_paginate',
+			'datatables_sort', 'datatables_filter', 'datatables_paginate',
 			'datatables_lengthchange', 'datatables_paginate_entries', 'datatables_info'
-			) as $_option ) {
+		) as $_option ) {
 			if ( isset( $wptr_table['options'][ $_option ] ) )
 				$new_table['options'][ $_option ] = $wptr_table['options'][ $_option ];
 		}
@@ -1686,6 +1723,54 @@ class TablePress_Admin_Controller extends TablePress_Controller {
 		// Prepare, initialize, and render the view
 		$this->view = TablePress::load_view( 'editor_button_thickbox', $view_data );
 		$this->view->render();
+	}
+
+
+	/**
+	 * Uninstall TablePress, and delete all tables and options
+	 *
+	 * @since 1.0.0
+	 */
+	public function handle_get_action_uninstall_tablepress() {
+		TablePress::check_nonce( 'uninstall_tablepress' );
+
+		$plugin = TABLEPRESS_BASENAME;
+
+		if ( ! current_user_can( 'activate_plugins' ) || ! current_user_can( 'tablepress_edit_options' ) || ! current_user_can( 'tablepress_delete_tables' ) || is_plugin_active_for_network( $plugin ) )
+			wp_die( __( 'You do not have sufficient permissions to access this page.', 'default' ) );
+
+		// Deactivate TablePress for the site (but not for the network)
+		deactivate_plugins( $plugin, false, false );
+		update_option( 'recently_activated', array( $plugin => time() ) + (array) get_option( 'recently_activated', array() ) );
+
+		// Delete all tables, "Custom CSS" files, and options
+		$this->model_table->delete_all();
+		$css_files_deleted = $this->model_options->delete_custom_css_files();
+		$this->model_table->destroy();
+		$this->model_options->destroy();
+
+		$this->init_i18n_support();
+
+		$output = '<strong>' . __( 'TablePress was uninstalled successfully.', 'tablepress' ) . '</strong><br /><br />';
+		$output .= __( 'All tables, data, and options were deleted.', 'tablepress' );
+		if ( is_multisite() )
+			$output .= ' ' . __( 'You may now ask the network admin to delete the plugin\'s folder <code>tablepress</code> from the server, if no other site in the network uses it.', 'tablepress' );
+		else
+			$output .= ' ' . __( 'You may now manually delete the plugin\'s folder <code>tablepress</code> from the <code>plugins</code> directory on your server or use the &#8220;Delete&#8221; link for TablePress on the WordPress &#8220;Plugins&#8221; page.', 'tablepress' );
+		if ( $css_files_deleted ) {
+			$output .= ' ' . __( 'Your TablePress &#8220;Custom CSS&#8221; files have been deleted automatically.', 'tablepress' );
+		} else {
+			if ( is_multisite() )
+				$output .= ' ' . __( 'Please also ask him to delete your TablePress &#8220;Custom CSS&#8221; files from the server.', 'tablepress' );
+			else
+				$output .= ' ' . __( 'You may now also delete your TablePress &#8220;Custom CSS&#8221; files in the <code>wp-content</code> folder.', 'tablepress' );
+		}
+		$output .= "</p>\n<p>";
+		if ( ! is_multisite() || is_super_admin() )
+			$output .= '<a class="button" href="' . esc_url( admin_url( 'plugins.php' ) ) . '">' . __( 'Go to &#8220;Plugins&#8221; page', 'tablepress' ) . '</a> ';
+		$output .= '<a class="button" href="' . esc_url( admin_url( 'index.php' ) ) . '">' . __( 'Go to Dashboard', 'tablepress' ) . '</a>';
+
+		wp_die( $output, __( 'Uninstall TablePress', 'tablepress' ), array( 'response' => 200, 'back_link' => false ) );
 	}
 
 } // class TablePress_Admin_Controller

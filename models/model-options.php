@@ -317,6 +317,44 @@ class TablePress_Options_Model extends TablePress_Model {
 	}
 
 	/**
+	 * Get the location (file path or URL) of the "Custom CSS" file, depending on whether it's a Multisite or not
+	 *
+	 * @since 1.0.0
+	 *
+ 	 * @param string $type "normal" version or "minified" version
+	 * @param string $location "path" or "url", for file path or URL
+	 * @return string Full file path or full URL for the "Custom CSS" file
+	*/
+	public function get_custom_css_location( $type, $location ) {
+		$suffix = ( 'minified' == $type ) ? '.min' : '';
+		$file = "tablepress-custom{$suffix}.css";
+
+		if ( is_multisite() ) {
+			// Multisite installation: /wp-content/uploads/sites/<ID>/
+			$upload_location = wp_upload_dir();
+		} else {
+			// Singlesite installation: /wp-content/
+			$upload_location = array(
+				'basedir' => WP_CONTENT_DIR,
+				'baseurl' => content_url()
+			);
+		}
+
+		switch ( $location ) {
+			case 'url':
+				$url = $upload_location['baseurl'] . '/' . $file;
+				$url = apply_filters( 'tablepress_custom_css_url', $url, $file, $type );
+				return $url;
+				break;
+			case 'path':
+				$path = $upload_location['basedir'] . '/' . $file;
+				$path = apply_filters( 'tablepress_custom_css_file_name', $path, $file, $type );
+				return $path;
+				break;
+		}
+	}
+
+	/**
 	 * Load the contents of the file with the "Custom CSS"
 	 *
 	 * @since 1.0.0
@@ -325,10 +363,7 @@ class TablePress_Options_Model extends TablePress_Model {
 	 * @return string|bool Custom CSS on success, false on error
 	 */
 	public function load_custom_css_from_file( $type = 'normal' ) {
-		$suffix = ( 'minified' == $type ) ? '.min' : '';
-		$filter_name = ( 'minified' == $type ) ? 'tablepress_custom_css_minified_file_name' : 'tablepress_custom_css_file_name';
-		$filename = WP_CONTENT_DIR . "/tablepress-custom{$suffix}.css";
-		$filename = apply_filters( $filter_name, $filename );
+		$filename = $this->get_custom_css_location( $type, 'path' );
 		// Check if file name is valid (0 means yes)
 		if ( 0 !== validate_file( $filename ) )
 			return false;
@@ -374,10 +409,8 @@ class TablePress_Options_Model extends TablePress_Model {
 		}
 
 		// we have valid access to the filesystem now -> try to save the file
-		$filename = WP_CONTENT_DIR . '/tablepress-custom.css';
-		$filename = apply_filters( 'tablepress_custom_css_file_name', $filename );
-		$filename_min = WP_CONTENT_DIR . '/tablepress-custom.min.css';
-		$filename_min = apply_filters( 'tablepress_custom_css_minified_file_name', $filename_min );
+		$filename = $this->get_custom_css_location( 'normal', 'path' );
+		$filename_min = $this->get_custom_css_location( 'minified', 'path' );
 		// Check if file name is valid (0 means yes)
 		if ( 0 !== validate_file( $filename ) || 0 !== validate_file( $filename_min ) )
 			TablePress::redirect( array( 'action' => 'options', 'message' => 'success_save_error_custom_css' ) );
@@ -406,6 +439,66 @@ class TablePress_Options_Model extends TablePress_Model {
 			'custom_css_version' => $this->get( 'custom_css_version' ) + 1
 		) );
 		TablePress::redirect( array( 'action' => 'options', 'message' => 'success_save' ) );
+	}
+
+
+	/**
+	 * Delete the "Custom CSS" files, of possible
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return bool True on success, false on failure
+	 */
+	public function delete_custom_css_files() {
+		// Start capturing the output, to later prevent it
+		ob_start();
+
+		$url = ''; // same page
+		$credentials = request_filesystem_credentials( $url, '', false, false, null );
+		// do we have credentials already? (Otherwise the form will have been rendered, which is not supported here.)
+		// or, if we have credentials, are they valid?
+		if ( false === $credentials || ! WP_Filesystem( $credentials ) ) {
+			ob_end_clean();
+			return false;
+		}
+
+		// we have valid access to the filesystem now -> try to save the file
+		$filename = $this->get_custom_css_location( 'normal', 'path' );
+		$filename_min = $this->get_custom_css_location( 'minified', 'path' );
+		// Check if file name is valid (0 means yes)
+		if ( 0 !== validate_file( $filename ) || 0 !== validate_file( $filename_min ) )
+			return false;
+
+		global $wp_filesystem;
+
+		// WP_CONTENT_DIR and (FTP-)Content-Dir can be different (e.g. if FTP working dir is /)
+		// We need to account for that by replacing the path difference in the filename
+		$path_difference = str_replace( $wp_filesystem->wp_content_dir(), '', trailingslashit( WP_CONTENT_DIR ) );
+		if ( '' != $path_difference ) {
+			$filename = str_replace( $path_difference, '', $filename );
+			$filename_min = str_replace( $path_difference, '', $filename_min );
+		}
+
+		$result = $result_min = true;
+		if ( $wp_filesystem->exists( $filename ) )
+			$result = $wp_filesystem->delete( $filename );
+		if ( $wp_filesystem->exists( $filename_min ) )
+			$result_min = $wp_filesystem->delete( $filename_min );
+
+		if ( ! $result || ! $result_min )
+			return false;
+
+		return true;
+	}
+
+	/**
+	 * Delete the WP_Option and the user option of the model
+	 *
+	 * @since 1.0.0
+	 */
+	public function destroy() {
+		$this->plugin_options->delete();
+		$this->user_options->delete_for_all_users();
 	}
 
 } // class TablePress_Options_Model

@@ -72,8 +72,8 @@ class TablePress_List_View extends TablePress_View {
 				'<img alt="' . __( 'Tobias Bäthge, developer of TablePress', 'tablepress' ) . '" src="https://secure.gravatar.com/avatar/50f1cff2e27a1f522b18ce229c057bc5?s=94" height="94" width="94" style="float:left;margin-right:10px;" />' .
 				__( 'Hi, my name is Tobias, I\'m the developer of the TablePress plugin.', 'tablepress' ) . '<br /><br />' .
 				__( 'Thanks for using it! You\'ve installed TablePress over a month ago.', 'tablepress' ) . ' ' .
-				sprintf( _n( 'If everything works and you are satisfied with the results of managing your %s table, isn\'t that worth a coffee or two?', 'If everything works and you are satisfied with the results of managing your %s tables, isn\'t that worth a coffee or two?', $data['table_count'], 'tablepress' ), $data['table_count'] ) . '<br/>' .
-				sprintf( __( '<a href="%s">Donations</a> help me to continue user support and development of this <em>free</em> software &mdash; things for which I spend countless hours of my free time! Thank you very much!', 'tablepress' ), 'http://tablepress.org/donate/' ) . '<br/><br />' .
+				sprintf( _n( 'If everything works and you are satisfied with the results of managing your %s table, isn\'t that worth a coffee or two?', 'If everything works and you are satisfied with the results of managing your %s tables, isn\'t that worth a coffee or two?', $data['table_count'], 'tablepress' ), $data['table_count'] ) . '<br />' .
+				sprintf( __( '<a href="%s">Donations</a> help me to continue user support and development of this <em>free</em> software &mdash; things for which I spend countless hours of my free time! Thank you very much!', 'tablepress' ), 'http://tablepress.org/donate/' ) . '<br /><br />' .
 				__( 'Sincerly, Tobias', 'tablepress' ) . '<br /><br />' .
 				sprintf( '<a href="%s" target="_blank"><strong>%s</strong></a>', 'http://tablepress.org/donate/', __( 'Sure, I\'ll buy you a coffee and support TablePress!', 'tablepress' ) ) . '&nbsp;&nbsp;&nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;&nbsp;' .
 				$this->ajax_link( array( 'action' => 'hide_message', 'item' => 'donation_nag', 'return' => 'list', 'target' => 'already-donated' ), __( 'I already donated.', 'tablepress' ) ) . '&nbsp;&nbsp;&nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;&nbsp;' .
@@ -202,7 +202,7 @@ class TablePress_List_View extends TablePress_View {
 		echo '<input type="hidden" name="page" value="' . esc_attr( $_GET['page'] ) . '" />' . "\n";
 	$this->wp_list_table->search_box( __( 'Search Tables', 'tablepress' ), 'tables_search' ); ?>
 </form>
-<form action="<?php echo admin_url( 'admin-post.php' ); ?>" method="post">
+<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
 	<?php
 		// this prints the nonce and action fields for this screen (done here instead of render(), due to moved <form>):
 		$this->do_text_boxes( 'header' );

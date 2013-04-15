@@ -329,9 +329,9 @@ abstract class TablePress {
 			// top-level parent page needs special treatment for better action strings
 			if ( self::$controller->is_top_level_page ) {
 				$target = 'admin.php';
-				if ( in_array( $params['action'], array( 'add', 'import', 'export', 'options', 'about' ), true ) )
-					$params['page'] .= '_' . $params['action'];
-				if ( in_array( $params['action'], array( 'list', 'add', 'import', 'export', 'options', 'about' ), true ) )
+				if ( ! in_array( $params['action'], array( 'list', 'edit' ), true ) )
+					$params['page'] = "tablepress_{$params['action']}";
+				if ( ! in_array( $params['action'], array( 'edit' ), true ) )
 					$params['action'] = false;
 			} else {
 				$target = self::$controller->parent_page;
@@ -382,7 +382,7 @@ abstract class TablePress {
 		// Message is not translated as it is shown on every admin screen, for which we don't want to load translations
 		echo '<div class="error"><p>' .
 			'<strong>Attention:</strong> ' .
-			'The installed version of WordPress is too old for the TablePress plugin! TablePress requires an up-to-date version! <strong>Please <a href="' . admin_url( 'update-core.php' ) . '">update your WordPress installation</a></strong>!' .
+			'The installed version of WordPress is too old for the TablePress plugin! TablePress requires an up-to-date version! <strong>Please <a href="' . esc_url( admin_url( 'update-core.php' ) ) . '">update your WordPress installation</a></strong>!' .
 			"</p></div>\n";
 	}
 
