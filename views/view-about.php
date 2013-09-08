@@ -74,7 +74,7 @@ class TablePress_About_View extends TablePress_View {
 		?>
 	<p>
 		<?php _e( 'At first, you should add or import a table.', 'tablepress' ); ?>
-		<?php _e( 'This means that you either let the plugin create an empty table for you or that you load an existing table from either a CSV, HTML, or JSON file.', 'tablepress' ); ?>
+		<?php _e( 'This means that you either let the plugin create an empty table for you or that you load an existing table from either a CSV, HTML, JSON, XLS, or XLSX file.', 'tablepress' ); ?>
 	</p>
 	<p>
 		<?php _e( 'Then you can edit your data or change the structure of your table (e.g. by inserting, deleting, moving, or swaping rows or columns or sorting them) and select specific table features like alternating row colors or whether to print the name or description, if you want.', 'tablepress' ); ?>
@@ -82,14 +82,14 @@ class TablePress_About_View extends TablePress_View {
 		<?php _e( 'Those will ask you for the necessary information and and corresponding HTML code will be added to the cell automatically.', 'tablepress' ); ?>
 	</p>
 	<p>
-		<?php printf( __( 'To insert a table into a page, post, or text widget, copy its Shortcode %s and paste it at the desired place in the editor.', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="[' . TablePress::$shortcode . ' id=&lt;ID&gt; /]" readonly="readonly" />' ); ?>
+		<?php printf( __( 'To insert a table into a page, post, or text widget, copy its Shortcode %s and paste it at the desired place in the editor.', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="' . esc_attr( '[' . TablePress::$shortcode . " id=<ID> /]" ) . '" readonly="readonly" />' ); ?>
 		<?php printf( __( 'You can also click the &#8220;%s&#8221; button in the editor toolbar to select and insert a table.', 'tablepress' ), __( 'Table', 'tablepress' ) ); ?>
 	</p>
 	<p>
 		<?php _e( 'Tables can be styled by changing and adding CSS commands.', 'tablepress' ); ?>
 		<?php _e( 'The plugin ships with default CSS stylesheets, which can be customized with own code or replaced with other stylesheets.', 'tablepress' ); ?>
 		<?php _e( 'For this, each table is given certain CSS classes that can be used as CSS selectors.', 'tablepress' ); ?>
-		<?php printf ( __( 'Please see the <a href="%s">documentation</a> for a list of these selectors and for styling examples.', 'tablepress' ), 'http://tablepress.org/documentation/' ); ?>
+		<?php printf( __( 'Please see the <a href="%s">documentation</a> for a list of these selectors and for styling examples.', 'tablepress' ), 'http://tablepress.org/documentation/' ); ?>
 	</p>
 		<?php
 	}
@@ -102,7 +102,7 @@ class TablePress_About_View extends TablePress_View {
 	public function postbox_more_information( $data, $box ) {
 		?>
 	<p>
-		<?php printf( __( 'More information about TablePress can be found on the <a href="%s">plugin&#8217;s website</a> or on its page in the <a href="%s">WordPress Plugin Directory</a>.', 'tablepress' ), 'http://tablepress.org/', 'http://wordpress.org/extend/plugins/tablepress/' ); ?>
+		<?php printf( __( 'More information about TablePress can be found on the <a href="%s">plugin&#8217;s website</a> or on its page in the <a href="%s">WordPress Plugin Directory</a>.', 'tablepress' ), 'http://tablepress.org/', 'http://wordpress.org/plugins/tablepress/' ); ?>
 		<?php printf( __( 'For technical information, please see the <a href="%s">documentation</a>.', 'tablepress' ), 'http://tablepress.org/documentation/' ); ?>
 	</p>
 		<?php
@@ -192,7 +192,7 @@ class TablePress_About_View extends TablePress_View {
 				foreach ( $data['plugin_languages'] as $lang_abbr => $language ) {
 					$link_template = ( ! empty( $language['translator_url'] ) ) ? '<a href="%1$s">%2$s</a>' : '%2$s';
 					$link = sprintf( $link_template, $language['translator_url'], $language['translator_name'] );
-					echo "<br />&middot; " . sprintf( __( '%s (thanks to %s)', 'tablepress' ), $language['name'], $link ) . "\n";
+					echo '<br />&middot; ' . sprintf( __( '%s (thanks to %s)', 'tablepress' ), $language['name'], $link ) . "\n";
 				}
 			?>
 		</p>
@@ -200,15 +200,6 @@ class TablePress_About_View extends TablePress_View {
 			<?php _e( 'Thank you to all donors, contributors, supporters, reviewers and users of the plugin!', 'tablepress' ); ?>
 		</p>
 		<?php
-	}
-
-	/**
-	 * Return the content for the help tab for this screen
-	 *
-	 * @since 1.0.0
-	 */
-	protected function help_tab_content() {
-		return 'Help for the About TablePress screen';
 	}
 
 } // class TablePress_About_View

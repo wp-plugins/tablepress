@@ -106,11 +106,6 @@ class TablePress_Options_View extends TablePress_View {
 				echo ' ';
 				_e( 'Please note that invalid CSS code will be stripped, if it can not be corrected automatically.', 'tablepress' );
 			?></p>
-			<?php
-				$file_abbr = $data['frontend_options']['custom_css_url'] . ' (' . ( ( $data['frontend_options']['custom_css_file_exists'] ) ? __( 'File exists', 'tablepress' ) : __( 'File seems not to exist', 'tablepress' ) ) . ')';
-			?>
-			<br />
-			<label for="option-use-custom-css-file" title="<?php echo esc_attr( $file_abbr ); ?>"><input type="checkbox" id="option-use-custom-css-file" name="options[use_custom_css_file]" value="true"<?php checked( $data['frontend_options']['use_custom_css_file'] ); ?> /> <?php _e( 'Use a file for storing and loading the &#8220;Custom CSS&#8221; code.', 'tablepress' ); ?> <?php _e( '<span class="description">(recommended)</span>', 'tablepress' ); ?></label>
 		</td>
 	</tr>
 </tbody>
@@ -186,20 +181,11 @@ class TablePress_Options_View extends TablePress_View {
         <p><?php
          	echo __( 'Uninstalling <strong>will permanently delete</strong> all TablePress tables and options from the database.', 'tablepress' ) . '<br />'
 	           	. __( 'It is recommended that you create a backup of the tables (by exporting the tables in the JSON format), in case you later change your mind.', 'tablepress' ) . '<br />'
-	           	. __( 'You will manually need to remove the plugin\'s files from the plugin folder afterwards.', 'tablepress' ) . '<br />'
+	           	. __( 'You will manually need to remove the plugin&#8217;s files from the plugin folder afterwards.', 'tablepress' ) . '<br />'
 	           	. __( 'Be very careful with this and only click the button if you know what you are doing!', 'tablepress' );
 		?></p>
 	    <p><a href="<?php echo TablePress::url( array( 'action' => 'uninstall_tablepress' ), true, 'admin-post.php' ); ?>" id="uninstall-tablepress" class="button"><?php _e( 'Uninstall TablePress', 'tablepress' ); ?></a></p>
         <?php
-	}
-
-	/**
-	 * Return the content for the help tab for this screen
-	 *
-	 * @since 1.0.0
-	 */
-	protected function help_tab_content() {
-		return 'Help for the Plugin Options screen';
 	}
 
 } // class TablePress_Options_View

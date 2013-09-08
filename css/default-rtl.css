@@ -10,7 +10,6 @@
  * @since 1.0.0
  */
 
-
 @font-face {
 	font-family: 'TablePress';
 	src: url('tablepress.eot');
@@ -45,6 +44,11 @@
 }
 .tablepress tbody td {
 	vertical-align: top;
+}
+
+/* Fix right column float in many themes */
+.tablepress [class*="column"]+[class*="column"]:last-child {
+	float: none;
 }
 
 /* Vertical lines / borders */
@@ -87,7 +91,6 @@
 /* Table wrapper */
 .dataTables_wrapper {
 	clear: both;
-	*zoom: 1; /* IE 7 hack, for better float clearing */
 	margin-bottom: 1em;
 }
 .dataTables_wrapper .tablepress {
@@ -231,11 +234,8 @@
 	float: none !important;
 }
 .dataTables_wrapper .sorting div:before,
-.dataTables_wrapper .sorting div:after,
 .dataTables_wrapper .sorting_asc div:before,
-.dataTables_wrapper .sorting_asc div:after,
-.dataTables_wrapper .sorting_desc div:before,
-.dataTables_wrapper .sorting_desc div:after {
+.dataTables_wrapper .sorting_desc div:before {
 	font-family: TablePress;
 	font-weight: normal;
 	font-size: 14px;

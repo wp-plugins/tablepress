@@ -215,7 +215,7 @@ class TablePress_Options_Model extends TablePress_Model {
 		// Capabilities for all roles
 		$roles = array( 'administrator', 'editor', 'author' );
 		foreach ( $roles as $role ) {
-			$role =& get_role( $role );
+			$role = get_role( $role );
 			if ( empty( $role ) )
 				continue;
 
@@ -236,10 +236,46 @@ class TablePress_Options_Model extends TablePress_Model {
 		}
 
 		// Capabilities for single roles
-		$role =& get_role( 'administrator' );
+		$role = get_role( 'administrator' );
 		if ( ! empty( $role ) ) {
 			$role->add_cap( 'tablepress_import_tables_wptr' );
 			$role->add_cap( 'tablepress_edit_options' );
+		}
+
+		// Refresh current set of capabilities of the user, to be able to directly use the new caps
+		$user = wp_get_current_user();
+		$user->get_role_caps();
+	}
+
+	/**
+	 * Remove all TablePress capabilities from all roles
+	 *
+	 * @see add_access_capabilities()
+	 *
+	 * @since 1.1.0
+	 */
+	public function remove_access_capabilities() {
+		// Capabilities for all roles
+		global $wp_roles;
+		if ( ! isset( $wp_roles ) )
+			$wp_roles = new WP_Roles();
+
+ 		foreach ( $wp_roles->roles as $role => $details ) {
+			$role = $wp_roles->get_role( $role );
+			if ( empty( $role ) )
+				continue;
+
+			$role->remove_cap( 'tablepress_edit_tables' );
+			$role->remove_cap( 'tablepress_delete_tables' );
+			$role->remove_cap( 'tablepress_list_tables' );
+			$role->remove_cap( 'tablepress_add_tables' );
+			$role->remove_cap( 'tablepress_copy_tables' );
+			$role->remove_cap( 'tablepress_import_tables' );
+			$role->remove_cap( 'tablepress_export_tables' );
+			$role->remove_cap( 'tablepress_access_options_screen' );
+			$role->remove_cap( 'tablepress_access_about_screen' );
+			$role->remove_cap( 'tablepress_import_tables_wptr' );
+			$role->remove_cap( 'tablepress_edit_options' );
 		}
 
 		// Refresh current set of capabilities of the user, to be able to directly use the new caps
@@ -256,14 +292,12 @@ class TablePress_Options_Model extends TablePress_Model {
 	 * @param string $cap Meta cap that is to be checked/mapped
 	 * @param int $user_id User ID for which meta cap is to be checked
 	 * @param array $args Arguments for the check, here e.g. the table ID
-	 * @return bool
+	 * @return array $caps Modified set of primitive caps
 	 */
 	public function map_tablepress_meta_caps( $caps, $cap, $user_id, $args ) {
 		if ( ! in_array( $cap, array( 'tablepress_edit_table', 'tablepress_edit_table_id', 'tablepress_copy_table', 'tablepress_delete_table', 'tablepress_export_table', 'tablepress_preview_table' ), true ) )
 			return $caps;
 
-		// $user = get_userdata( $user_id );
-		// $username = $user->user_login);
 		// $table_id = ( ! empty( $args ) ) ? $args[0] : false;
 
 		// reset current set of primitive caps
@@ -294,9 +328,7 @@ class TablePress_Options_Model extends TablePress_Model {
 				break;
 		}
 
-		$caps = apply_filters( 'tablepress_map_meta_caps', $caps, $cap, $user_id, $args );
-
-		return $caps;
+		return apply_filters( 'tablepress_map_meta_caps', $caps, $cap, $user_id, $args );
 	}
 
 	/**
@@ -314,181 +346,6 @@ class TablePress_Options_Model extends TablePress_Model {
 		if ( empty( $update_message ) )
 			$update_message = '';
 		return $update_message;
-	}
-
-	/**
-	 * Get the location (file path or URL) of the "Custom CSS" file, depending on whether it's a Multisite or not
-	 *
-	 * @since 1.0.0
-	 *
- 	 * @param string $type "normal" version or "minified" version
-	 * @param string $location "path" or "url", for file path or URL
-	 * @return string Full file path or full URL for the "Custom CSS" file
-	*/
-	public function get_custom_css_location( $type, $location ) {
-		$suffix = ( 'minified' == $type ) ? '.min' : '';
-		$file = "tablepress-custom{$suffix}.css";
-
-		if ( is_multisite() ) {
-			// Multisite installation: /wp-content/uploads/sites/<ID>/
-			$upload_location = wp_upload_dir();
-		} else {
-			// Singlesite installation: /wp-content/
-			$upload_location = array(
-				'basedir' => WP_CONTENT_DIR,
-				'baseurl' => content_url()
-			);
-		}
-
-		switch ( $location ) {
-			case 'url':
-				$url = $upload_location['baseurl'] . '/' . $file;
-				$url = apply_filters( 'tablepress_custom_css_url', $url, $file, $type );
-				return $url;
-				break;
-			case 'path':
-				$path = $upload_location['basedir'] . '/' . $file;
-				$path = apply_filters( 'tablepress_custom_css_file_name', $path, $file, $type );
-				return $path;
-				break;
-		}
-	}
-
-	/**
-	 * Load the contents of the file with the "Custom CSS"
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $type "normal" version or "minified" version
-	 * @return string|bool Custom CSS on success, false on error
-	 */
-	public function load_custom_css_from_file( $type = 'normal' ) {
-		$filename = $this->get_custom_css_location( $type, 'path' );
-		// Check if file name is valid (0 means yes)
-		if ( 0 !== validate_file( $filename ) )
-			return false;
-		if ( ! @is_file( $filename ) )
-			return false;
-		if ( ! @is_readable( $filename ) )
-			return false;
-		return file_get_contents( $filename );
-	}
-
-	/**
-	 * Save "Custom CSS" to a file, or return HTML for the credentials form
-	 *
-	 * @since 1.0.0
-	 *
-	 * @return string (if necessary) HTML for the credentials form for the WP_Filesystem API
-	 */
-	public function save_custom_css_to_file() {
-		// Set current screen to get Screen Icon to have a custom HTML ID, so that we can hide it with CSS
-		set_current_screen( 'tablepress_options_invisible' );
-
-		// Start capturing the output, to get HTML of the credentials form (if needed)
-		ob_start();
-
-		$url = ''; // same page
-		$credentials = request_filesystem_credentials( $url, '', false, false, null );
-		// do we have credentials already? (Otherwise the form will have been rendered already.)
-		if ( false === $credentials ) {
-			$form_data = ob_get_contents();
-			ob_end_clean();
-			$form_data = str_replace( 'name="upgrade" id="upgrade" class="button"', 'name="upgrade" id="upgrade" class="button button-primary button-large"', $form_data );
-			return $form_data;
-		}
-
-		// we have received credentials, but don't know if they are valid yet
-		if ( ! WP_Filesystem( $credentials ) ) {
-			// credentials failed, so ask again (with $error flag true)
-			request_filesystem_credentials( $url, '', true, false, null );
-			$form_data = ob_get_contents();
-			ob_end_clean();
-			$form_data = str_replace( 'name="upgrade" id="upgrade" class="button"', 'name="upgrade" id="upgrade" class="button button-primary button-large"', $form_data );
-			return $form_data;
-		}
-
-		// we have valid access to the filesystem now -> try to save the file
-		$filename = $this->get_custom_css_location( 'normal', 'path' );
-		$filename_min = $this->get_custom_css_location( 'minified', 'path' );
-		// Check if file name is valid (0 means yes)
-		if ( 0 !== validate_file( $filename ) || 0 !== validate_file( $filename_min ) )
-			TablePress::redirect( array( 'action' => 'options', 'message' => 'success_save_error_custom_css' ) );
-		global $wp_filesystem;
-
-		// WP_CONTENT_DIR and (FTP-)Content-Dir can be different (e.g. if FTP working dir is /)
-		// We need to account for that by replacing the path difference in the filename
-		$path_difference = str_replace( $wp_filesystem->wp_content_dir(), '', trailingslashit( WP_CONTENT_DIR ) );
-		if ( '' != $path_difference ) {
-			$filename = str_replace( $path_difference, '', $filename );
-			$filename_min = str_replace( $path_difference, '', $filename_min );
-		}
-
-		$custom_css = $this->get( 'custom_css' );
-		$custom_css_minified = $this->get( 'custom_css_minified' );
-		$result = $wp_filesystem->put_contents( $filename, $custom_css, FS_CHMOD_FILE );
-		$result_min = $wp_filesystem->put_contents( $filename_min, $custom_css_minified, FS_CHMOD_FILE );
-		if ( ! $result || ! $result_min )
-			TablePress::redirect( array( 'action' => 'options', 'message' => 'success_save_error_custom_css' ) );
-
-		// at this point, saving was successful, so enable the checkbox again
-		// (if it was not enabled before, we would never have tried to save)
-		// and also increase the "Custom CSS" version number (for cache busting)
-		$this->update( array(
-			'use_custom_css_file' => true,
-			'custom_css_version' => $this->get( 'custom_css_version' ) + 1
-		) );
-		TablePress::redirect( array( 'action' => 'options', 'message' => 'success_save' ) );
-	}
-
-
-	/**
-	 * Delete the "Custom CSS" files, of possible
-	 *
-	 * @since 1.0.0
-	 *
-	 * @return bool True on success, false on failure
-	 */
-	public function delete_custom_css_files() {
-		// Start capturing the output, to later prevent it
-		ob_start();
-
-		$url = ''; // same page
-		$credentials = request_filesystem_credentials( $url, '', false, false, null );
-		// do we have credentials already? (Otherwise the form will have been rendered, which is not supported here.)
-		// or, if we have credentials, are they valid?
-		if ( false === $credentials || ! WP_Filesystem( $credentials ) ) {
-			ob_end_clean();
-			return false;
-		}
-
-		// we have valid access to the filesystem now -> try to save the file
-		$filename = $this->get_custom_css_location( 'normal', 'path' );
-		$filename_min = $this->get_custom_css_location( 'minified', 'path' );
-		// Check if file name is valid (0 means yes)
-		if ( 0 !== validate_file( $filename ) || 0 !== validate_file( $filename_min ) )
-			return false;
-
-		global $wp_filesystem;
-
-		// WP_CONTENT_DIR and (FTP-)Content-Dir can be different (e.g. if FTP working dir is /)
-		// We need to account for that by replacing the path difference in the filename
-		$path_difference = str_replace( $wp_filesystem->wp_content_dir(), '', trailingslashit( WP_CONTENT_DIR ) );
-		if ( '' != $path_difference ) {
-			$filename = str_replace( $path_difference, '', $filename );
-			$filename_min = str_replace( $path_difference, '', $filename_min );
-		}
-
-		$result = $result_min = true;
-		if ( $wp_filesystem->exists( $filename ) )
-			$result = $wp_filesystem->delete( $filename );
-		if ( $wp_filesystem->exists( $filename_min ) )
-			$result_min = $wp_filesystem->delete( $filename_min );
-
-		if ( ! $result || ! $result_min )
-			return false;
-
-		return true;
 	}
 
 	/**

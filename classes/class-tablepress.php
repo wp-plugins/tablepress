@@ -27,7 +27,7 @@ abstract class TablePress {
 	 *
 	 * @const string
 	 */
-	const version = '1.0';
+	const version = '1.1';
 
 	/**
 	 * TablePress internal plugin version ("options scheme" version)
@@ -38,7 +38,7 @@ abstract class TablePress {
 	 *
 	 * @const int
 	 */
-	const db_version = 18;
+	const db_version = 20;
 
 	/**
 	 * TablePress "table scheme" (data format structure) version
@@ -302,7 +302,7 @@ abstract class TablePress {
 	 */
 	public static function get_user_display_name( $user_id ) {
 		$user = get_userdata( $user_id );
-		return ( $user && isset( $user->display_name ) ) ? $user->display_name : '';
+		return ( $user && isset( $user->display_name ) ) ? $user->display_name : __( '<em>unknown</em>', 'tablepress' );
 	}
 
 	/**
@@ -370,7 +370,7 @@ abstract class TablePress {
 			$redirect = add_query_arg( '_wpnonce', wp_create_nonce( self::nonce( $params['action'], $params['item'] ) ), $redirect );
 		}
 		wp_redirect( $redirect );
-		die();
+		exit;
 	}
 
 	/**

@@ -52,7 +52,7 @@ class TablePress_Import {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @var array
+	 * @var string
 	 */
 	protected $import_data;
 
@@ -84,6 +84,8 @@ class TablePress_Import {
 		if ( $this->html_import_support_available )
 			$this->import_formats['html'] = __( 'HTML - Hypertext Markup Language', 'tablepress' );
 		$this->import_formats['json'] = __( 'JSON - JavaScript Object Notation', 'tablepress' );
+		$this->import_formats['xls'] = __( 'XLS - Microsoft Excel 97-2003 (experimental)', 'tablepress' );
+		$this->import_formats['xlsx'] = __( 'XLSX - Microsoft Excel 2007-2013 (experimental)', 'tablepress' );
 	}
 
 	/**
@@ -92,13 +94,14 @@ class TablePress_Import {
 	 * @since 1.0.0
 	 *
 	 * @param string $format Import format
-	 * @param array $data Data to import
+	 * @param string $data Data to import
 	 * @return bool|array False on error, table array on success
 	 */
 	public function import_table( $format, $data ) {
 		$this->import_data = $data;
 
-		$this->fix_table_encoding();
+		if ( ! in_array( $format, array( 'xlsx', 'xls' ) ) )
+			$this->fix_table_encoding();
 
 		switch ( $format ) {
 			case 'csv':
@@ -109,6 +112,12 @@ class TablePress_Import {
 				break;
 			case 'json':
 				$this->import_json();
+				break;
+			case 'xlsx':
+				$this->import_xlsx();
+				break;
+			case 'xls':
+				$this->import_xls();
 				break;
 			default:
 				return false;
@@ -151,10 +160,12 @@ class TablePress_Import {
 			return;
 		}
 
+		$temp_data = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . $temp_data; // Prepend XML declaration, for better encoding support
+		if ( function_exists( 'libxml_disable_entity_loader' ) )
+			libxml_disable_entity_loader( true ); // don't expand external entities (see http://websec.io/2012/08/27/Preventing-XXE-in-PHP.html)
 		libxml_use_internal_errors( true ); // no warnings/errors raised, but stored internally
 		$dom = new DOMDocument( '1.0', 'UTF-8' );
 		$dom->strictErrorChecking = false; // no strict checking for invalid HTML
-		$temp_data = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . $temp_data; // Prepend XML declaration, for better encoding support
 		$dom->loadHTML( $temp_data );
 		if ( false === $dom ) {
 			$this->imported_table = false;
@@ -179,7 +190,7 @@ class TablePress_Import {
 						$output .= "Error {$error->code}: {$error->message} in line {$error->line}, column {$error->column}<br />";
 						break;
 					case LIBXML_ERR_FATAL:
-						$output .= "Fatal {Error $error->code}: {$error->message} in line {$error->line}, column {$error->column}<br />";
+						$output .= "Fatal Error {$error->code}: {$error->message} in line {$error->line}, column {$error->column}<br />";
 						break;
 				}
 			}
@@ -222,10 +233,12 @@ class TablePress_Import {
 		foreach ( $element as $row ) {
 			$new_row = array();
 			foreach ( $row as $cell ) {
-				if ( 1 === preg_match( '#<t(?:d|h).*?>(.*)</t(?:d|h)>#is', $cell->asXML(), $matches ) ) // get text between <td>...</td>, or <th>...</th>, possibly with attributes
+				if ( 1 === preg_match( '#<t(?:d|h).*?>(.*)</t(?:d|h)>#is', $cell->asXML(), $matches ) ) { // get text between <td>...</td>, or <th>...</th>, possibly with attributes
+					$matches[1] = html_entity_decode( $matches[1], ENT_NOQUOTES, 'UTF-8' ); // decode HTML entities again, as there might be some left especially in attributes of HTML tags in the cells (see http://php.net/manual/en/simplexmlelement.asxml.php#107137 )
 					$new_row[] = $matches[1];
-				else
+				} else {
 					$new_row[] = '';
+				}
 			}
 			$rows[] = $new_row;
 		}
@@ -242,8 +255,40 @@ class TablePress_Import {
 
 		// Check if JSON could be decoded
 		if ( is_null( $json_table ) ) {
-			$this->imported_table = false;
-			return;
+			if ( function_exists( 'json_last_error' ) ) {
+				// Constant JSON_ERROR_UTF8 is only available as of PHP 5.3.3
+				if ( ! defined( 'JSON_ERROR_UTF8' ) )
+					define( 'JSON_ERROR_UTF8', 5 );
+
+				switch ( json_last_error() ) {
+					case JSON_ERROR_NONE:
+						$json_error = 'JSON_ERROR_NONE'; // should never happen here, as this is only called in case of an error
+						break;
+					case JSON_ERROR_DEPTH:
+						$json_error = 'JSON_ERROR_DEPTH';
+						break;
+					case JSON_ERROR_STATE_MISMATCH:
+						$json_error = 'JSON_ERROR_STATE_MISMATCH';
+						break;
+					case JSON_ERROR_CTRL_CHAR:
+						$json_error = 'JSON_ERROR_CTRL_CHAR';
+						break;
+					case JSON_ERROR_SYNTAX:
+						$json_error = 'JSON_ERROR_SYNTAX';
+						break;
+					case JSON_ERROR_UTF8:
+						$json_error = 'JSON_ERROR_UTF8';
+						break;
+					default:
+						$json_error = 'UNKNOWN ERROR';
+						break;
+				}
+				$output = '<strong>' . __( 'The imported file contains errors:', 'tablepress' ) . "</strong><br /><br />{$json_error}<br />";
+				wp_die( $output, 'Import Error', array( 'response' => 200, 'back_link' => true ) );
+			} else { // No JSON error detection available
+				$this->imported_table = false;
+				return;
+			}
 		}
 
 		if ( isset( $json_table['data'] ) )
@@ -255,6 +300,86 @@ class TablePress_Import {
 
 		$table['data'] = $this->pad_array_to_max_cols( $table['data'] );
 		$this->imported_table = $table;
+	}
+
+	/**
+	 * Import Microsoft Excel 97-2003 data
+	 *
+	 * @since 1.1.0
+	 */
+	protected function import_xls() {
+		$excel_reader = TablePress::load_class( 'Spreadsheet_Excel_Reader', 'excel-reader.class.php', 'libraries', $this->import_data );
+
+		// loop through Excel file and retrieve value and colspan/rowspan properties for each cell
+		$sheet = 0; // import first sheet of the Workbook
+		$table = array();
+		for ( $row = 1; $row <= $excel_reader->rowcount( $sheet ); $row++ ) {
+			$table_row = array();
+			for ( $col = 1; $col <= $excel_reader->colcount( $sheet ); $col++ ) {
+				$cell = array();
+				$cell['rowspan'] = $excel_reader->rowspan( $row, $col, $sheet );
+				$cell['colspan'] = $excel_reader->colspan( $row, $col, $sheet );
+				$cell['val'] = $excel_reader->val( $row, $col, $sheet );
+				$table_row[] = $cell;
+			}
+			$table[] = $table_row;
+		}
+
+		// transform colspan/rowspan properties to TablePress equivalent (cell content)
+		foreach ( $table as $row_idx => $row ) {
+			foreach ( $row as $col_idx => $cell ) {
+				if ( 1 == $cell['rowspan'] && 1 == $cell['colspan'] )
+					continue;
+
+				if ( 1 < $cell['colspan'] ) {
+					for ( $i = 1; $i < $cell['colspan']; $i++ ) {
+						$table[ $row_idx ][ $col_idx + $i ]['val'] = '#colspan#';
+					}
+				}
+				if ( 1 < $cell['rowspan'] ) {
+					for ( $i = 1; $i < $cell['rowspan']; $i++ ) {
+						$table[ $row_idx + $i ][ $col_idx ]['val'] = '#rowspan#';
+					}
+				}
+
+				if ( 1 < $cell['rowspan'] && 1 < $cell['colspan'] ) {
+					for ( $i = 1; $i < $cell['rowspan']; $i++ ) {
+						for ( $j = 1; $j < $cell['colspan']; $j++ ) {
+							$table[ $row_idx + $i ][ $col_idx + $j ]['val'] = '#span#';
+						}
+					}
+				}
+			}
+		}
+
+		// flatten value property to two-dimensional array
+		$result_table = array();
+		foreach ( $table as $row_idx => $row ) {
+			$table_row = array();
+			foreach ( $row as $col_idx => $cell ) {
+				$table_row[] = (string)$cell['val'];
+			}
+			$result_table[] = $table_row;
+		}
+
+		$this->imported_table = array( 'data' => $this->pad_array_to_max_cols( $result_table ) );
+	}
+
+	/**
+	 * Import Microsoft Excel 2007-2013 data
+	 *
+	 * @since 1.1.0
+	 */
+	protected function import_xlsx() {
+		TablePress::load_file( 'simplexlsx.class.php', 'libraries' );
+		$simplexlsx = new SimpleXLSX( $this->import_data, true );
+
+		if ( $simplexlsx->success() ) {
+			$this->imported_table = array( 'data' => $this->pad_array_to_max_cols( $simplexlsx->rows() ) );
+		} else {
+			$output = '<strong>' . __( 'The imported file contains errors:', 'tablepress' ) . '</strong><br /><br />' . $simplexlsx->error() . '<br />';
+			wp_die( $output, 'Import Error', array( 'response' => 200, 'back_link' => true ) );
+		}
 	}
 
 	/**

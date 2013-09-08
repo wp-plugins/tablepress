@@ -3,8 +3,8 @@ Contributors: TobiasBg
 Donate link: http://tablepress.org/donate/
 Tags: html,table,data,editor,csv,excel,import,export
 Requires at least: 3.5
-Tested up to: 3.6
-Stable tag: 1.0
+Tested up to: 3.7-alpha
+Stable tag: 1.1
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,7 +33,7 @@ If you are currently using WP-Table Reloaded, it is recommended that you switch 
 5. "Export" screen
 6. "Plugin Options" screen
 7. "About" screen
-8. Two example tables (as they can be seen on the [TablePress website](http://tablepress.org/demo/))
+8. An example table (as it can be seen on the [TablePress website](http://tablepress.org/demo/))
 
 == Installation ==
 
@@ -64,9 +64,9 @@ In short: WordPress 3.5 or higher, while the latest version of WordPress is alwa
 = Languages and Localization? =
 
 The plugin currently includes the following languages:
-Chinese (Simplified), English, French, German, Polish, Slovak, and Spanish.
+Brazilian Portuguese, Chinese (Simplified), Czech, Dutch, English, Finnish, French, German, Hebrew, Icelandic, Italian, Japanese, Latvian, Polish, Russian, Slovak, Spanish, and Turkish.
 
-I'd really appreciate it, if you would translate the plugin into your language! Using Heiko Rabe's WordPress plugin [Codestyling Localization](http://wordpress.org/extend/plugins/codestyling-localization/) that really is as easy as pie. Just install the plugin, add your language, create the .po-file, translate the strings in the comfortable editor and create the .mo-file. It will automatically be saved in TablePress's plugin folder. If you send me the .mo- and .po-file, I will gladly include them into future plugin releases.
+I'd really appreciate it, if you would translate the plugin into your language! Using Heiko Rabe's WordPress plugin [Codestyling Localization](http://wordpress.org/plugins/codestyling-localization/) that really is as easy as pie. Just install the plugin, add your language, create the .po-file, translate the strings in the comfortable editor and create the .mo-file. It will automatically be saved in TablePress's plugin folder. If you send me the .mo- and .po-file, I will gladly include them into future plugin releases.
 There is also a .pot-file available to use in the "i18n" subfolder. Of course you can also use [poEdit](http://www.poedit.net/) as your editor, which also works nicely.
 
 = Development =
@@ -107,6 +107,18 @@ I'm also happy about [donations](http://tablepress.org/donate/) or something fro
 
 == Changelog ==
 
+= Version 1.1 =
+* Experimental import for Excel files (.xls and .xlsx)
+* More math functions in formulas (including if-conditionals, statistical functions, ...)
+* Better "Custom CSS" saving for higher performance
+* Bugfix: Encoding problem during HTML import
+* Bugfix: Roles are now deleted during uninstallation
+* Bugfix: Search for tables was broken, if Shortcode had been changed
+* Plugin Unit Tests for automated code testing
+* Added several new translations (Brazilian Portuguese, Czech, Dutch, Finnish, Hebrew, Icelandic, Italian, Japanese, Latvian, Russian, and Turkish)
+* Many more internal improvements of code and usability
+* Updated external libraries
+
 = Version 1.0 =
 Official release with a few fixes and many enhancements and improvements
 
@@ -117,6 +129,9 @@ Release candidate in which all intended features are included and very stable.
 Initial version where most features are ready and pretty stable.
 
 == Upgrade Notice ==
+
+= 1.1 =
+This upgrade includes several new features, enhancements, and bugfixes, and is a recommended maintenance release.
 
 = 1.0 =
 This release contains a few bug fixed and many enhancements and new features, and is a recommended update.

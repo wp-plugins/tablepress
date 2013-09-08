@@ -43,6 +43,7 @@ class TablePress_Edit_View extends TablePress_View {
 		$action_messages = array(
 			'success_save' => __( 'The table was saved successfully.', 'tablepress' ),
 			'success_add' => __( 'The table was added successfully.', 'tablepress' ),
+			'success_copy' => _n( 'The table was copied successfully.', 'The tables were copied successfully.', 1, 'tablepress' ) . ' ' . sprintf( __( 'You are now seeing the copied table, which has the table ID &#8220;%s&#8221;.', 'tablepress' ), esc_html( $data['table']['id'] ) ),
 			'success_import' => __( 'The table was imported successfully.', 'tablepress' ),
 			'success_import_wp_table_reloaded' => __( 'The table was imported successfully from WP-Table Reloaded.', 'tablepress' ),
 			'error_save' => __( 'Error: The table could not be saved.', 'tablepress' ),
@@ -66,7 +67,7 @@ class TablePress_Edit_View extends TablePress_View {
 		wp_deregister_script( 'wplink' );
 		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
 		// See wp-includes/script-loader.php for default parameters
-		$wplink_url = plugins_url( "admin/tp_wplink{$suffix}.js", TABLEPRESS__FILE__ );
+		$wplink_url = plugins_url( "admin/js/tp_wplink{$suffix}.js", TABLEPRESS__FILE__ );
 		wp_enqueue_script( 'wplink', $wplink_url, array( 'jquery', 'wpdialogs' ), TablePress::version, true );
 		wp_localize_script( 'wplink', 'wpLinkL10n', array(
 			'title' => _x( 'Insert/edit link', 'Insert Link dialog', 'tablepress' ),
@@ -82,7 +83,7 @@ class TablePress_Edit_View extends TablePress_View {
 			'options' => array(
 				'cells_advanced_editor' => apply_filters( 'tablepress_edit_cells_advanced_editor', true ),
 				'cells_auto_grow' => apply_filters( 'tablepress_edit_cells_auto_grow', true ),
-				'shortcode' => TablePress::$shortcode
+				'shortcode' => esc_js( TablePress::$shortcode )
 			),
 			'strings' => array_merge( array(
 				'no_remove_all_rows' => __( 'You can not delete all table rows!', 'tablepress' ),
@@ -190,9 +191,9 @@ class TablePress_Edit_View extends TablePress_View {
 		<th class="column-1" scope="row"><label for="table-id"><?php _e( 'Table ID', 'tablepress' ); ?>:</label></th>
 		<td class="column-2">
 			<input type="hidden" name="table[id]" id="table-id" value="<?php echo esc_attr( $data['table']['id'] ); ?>" />
-			<input type="text" name="table[new_id]" id="table-new-id" class="small-text" value="<?php echo esc_attr( $data['table']['id'] ); ?>" title="<?php esc_attr_e( 'The Table ID can only consist of letters, numbers, hyphens (-), and underscores (_).', 'tablepress' ); ?>" pattern="[A-Za-z0-9-_]+" required />
+			<input type="text" name="table[new_id]" id="table-new-id" class="small-text" value="<?php echo esc_attr( $data['table']['id'] ); ?>" title="<?php esc_attr_e( 'The Table ID can only consist of letters, numbers, hyphens (-), and underscores (_).', 'tablepress' ); ?>" pattern="[A-Za-z0-9-_]+" required <?php echo ( ! current_user_can( 'tablepress_edit_table_id', $data['table']['id'] ) ) ? 'readonly ' : ''; ?>/>
 			<div style="float: right; margin-right: 1%;"><label for="table-information-shortcode"><?php _e( 'Shortcode', 'tablepress' ); ?>:</label>
-			<input type="text" id="table-information-shortcode" class="table-shortcode" value="[<?php echo TablePress::$shortcode; ?> id=<?php echo esc_attr( $data['table']['id'] ); ?> /]" readonly="readonly" /></div>
+			<input type="text" id="table-information-shortcode" class="table-shortcode" value="<?php echo esc_attr( '[' . TablePress::$shortcode . " id={$data['table']['id']} /]" ); ?>" readonly="readonly" /></div>
 		</td>
 	</tr>
 	<tr class="top-border">
@@ -244,7 +245,7 @@ class TablePress_Edit_View extends TablePress_View {
 			}
 		}
 ?>
-<table id="edit-form">
+<table id="edit-form" class="tablepress-edit-screen-id-<?php echo esc_attr( $data['table']['id'] ); ?>">
 	<thead>
 		<tr id="edit-form-head">
 			<th></th>
@@ -255,7 +256,7 @@ class TablePress_Edit_View extends TablePress_View {
 		if ( 0 === $visibility['columns'][$col_idx] )
 			$column_class = ' column-hidden';
 		$column = TablePress::number_to_letter( $col_idx + 1 );
-		echo "\t\t\t<th class=\"head{$column_class}\"><span class=\"sort-control sort-desc hide-if-no-js\" title=\"" . __( 'Sort descending', 'tablepress' ) . "\"><span class=\"sorting-indicator\"></span></span><span class=\"sort-control sort-asc hide-if-no-js\" title=\"" . __( 'Sort ascending', 'tablepress' ) . "\"><span class=\"sorting-indicator\"></span></span><span class=\"move-handle\">{$column}</span></th>\n";
+		echo "\t\t\t<th class=\"head{$column_class}\"><span class=\"sort-control sort-desc hide-if-no-js\" title=\"" . esc_attr__( 'Sort descending', 'tablepress' ) . "\"><span class=\"sorting-indicator\"></span></span><span class=\"sort-control sort-asc hide-if-no-js\" title=\"" . esc_attr__( 'Sort ascending', 'tablepress' ) . "\"><span class=\"sorting-indicator\"></span></span><span class=\"move-handle\">{$column}</span></th>\n";
 	}
 ?>
 			<th></th>
@@ -325,15 +326,15 @@ class TablePress_Edit_View extends TablePress_View {
 <tbody>
 	<tr class="bottom-border">
 		<td class="column-1">
-			<input type="button" class="button" id="link-add" value="<?php _e( 'Insert Link', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="link-add" value="<?php esc_attr_e( 'Insert Link', 'tablepress' ); ?>" />
 			<a href="<?php echo $media_library_url; ?>" class="button" id="image-add"><?php _e( 'Insert Image', 'tablepress' ); ?></a>
-			<input type="button" class="button" id="advanced-editor-open" value="<?php _e( 'Advanced Editor', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="advanced-editor-open" value="<?php esc_attr_e( 'Advanced Editor', 'tablepress' ); ?>" />
 		</td>
 		<td class="column-2">
 			<?php _e( 'Combine cells', 'tablepress' ); ?>:&nbsp;
-			<input type="button" class="button" id="span-add-rowspan" value="<?php _e( 'in a column (rowspan)', 'tablepress' ); ?>" />
-			<input type="button" class="button" id="span-add-colspan" value="<?php _e( 'in a row (colspan)', 'tablepress' ); ?>" />
-			<input type="button" class="button show-help-box" value="<?php _e( '?', 'tablepress' ); ?>" title="<?php esc_attr_e( 'Help on combining cells', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="span-add-rowspan" value="<?php esc_attr_e( 'in a column (rowspan)', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="span-add-colspan" value="<?php esc_attr_e( 'in a row (colspan)', 'tablepress' ); ?>" />
+			<input type="button" class="button show-help-box" value="<?php esc_attr_e( '?', 'tablepress' ); ?>" title="<?php esc_attr_e( 'Help on combining cells', 'tablepress' ); ?>" />
 			<div class="hidden-container hidden-help-box-container"><?php
 				echo '<p>' . __( 'Table cells can span across more than one column or row.', 'tablepress' ) . '</p>';
 				echo '<p>' . __( 'Combining consecutive cells within the same row is called &#8220;colspanning&#8221;.', 'tablepress' )
@@ -348,35 +349,35 @@ class TablePress_Edit_View extends TablePress_View {
 	<tr class="top-border">
 		<td class="column-1">
 			<?php _e( 'Selected rows', 'tablepress' ); ?>:&nbsp;
-			<input type="button" class="button" id="rows-hide" value="<?php _e( 'Hide', 'tablepress' ); ?>" />
-			<input type="button" class="button" id="rows-unhide" value="<?php _e( 'Show', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="rows-hide" value="<?php esc_attr_e( 'Hide', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="rows-unhide" value="<?php esc_attr_e( 'Show', 'tablepress' ); ?>" />
 		</td>
 		<td class="column-2">
 			<?php _e( 'Selected columns', 'tablepress' ); ?>:&nbsp;
-			<input type="button" class="button" id="columns-hide" value="<?php _e( 'Hide', 'tablepress' ); ?>" />
-			<input type="button" class="button" id="columns-unhide" value="<?php _e( 'Show', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="columns-hide" value="<?php esc_attr_e( 'Hide', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="columns-unhide" value="<?php esc_attr_e( 'Show', 'tablepress' ); ?>" />
 		</td>
 	</tr>
 	<tr class="bottom-border">
 		<td class="column-1">
 			<?php _e( 'Selected rows', 'tablepress' ); ?>:&nbsp;
-			<input type="button" class="button" id="rows-duplicate" value="<?php _e( 'Duplicate', 'tablepress' ); ?>" />
-			<input type="button" class="button" id="rows-insert" value="<?php _e( 'Insert', 'tablepress' ); ?>" />
-			<input type="button" class="button" id="rows-remove" value="<?php _e( 'Delete', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="rows-duplicate" value="<?php esc_attr_e( 'Duplicate', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="rows-insert" value="<?php esc_attr_e( 'Insert', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="rows-remove" value="<?php esc_attr_e( 'Delete', 'tablepress' ); ?>" />
 		</td>
 		<td class="column-2">
 			<?php _e( 'Selected columns', 'tablepress' ); ?>:&nbsp;
-			<input type="button" class="button" id="columns-duplicate" value="<?php _e( 'Duplicate', 'tablepress' ); ?>" />
-			<input type="button" class="button" id="columns-insert" value="<?php _e( 'Insert', 'tablepress' ); ?>" />
-			<input type="button" class="button" id="columns-remove" value="<?php _e( 'Delete', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="columns-duplicate" value="<?php esc_attr_e( 'Duplicate', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="columns-insert" value="<?php esc_attr_e( 'Insert', 'tablepress' ); ?>" />
+			<input type="button" class="button" id="columns-remove" value="<?php esc_attr_e( 'Delete', 'tablepress' ); ?>" />
 		</td>
 	</tr>
 	<tr class="top-border">
 		<td class="column-1">
-			<?php printf( __( 'Add %s row(s)', 'tablepress' ), '<input type="number" id="rows-append-number" class="small-text numbers-only" title="' . __( 'This field must contain a positive number.', 'tablepress' ) . '" value="1" min="1" max="99999" maxlength="5" required />' ); ?>&nbsp;<input type="button" class="button" id="rows-append" value="<?php _e( 'Add', 'tablepress' ); ?>" />
+			<?php printf( __( 'Add %s row(s)', 'tablepress' ), '<input type="number" id="rows-append-number" class="small-text numbers-only" title="' . esc_attr__( 'This field must contain a positive number.', 'tablepress' ) . '" value="1" min="1" max="99999" maxlength="5" required />' ); ?>&nbsp;<input type="button" class="button" id="rows-append" value="<?php esc_attr_e( 'Add', 'tablepress' ); ?>" />
 		</td>
 		<td class="column-2">
-			<?php printf( __( 'Add %s column(s)', 'tablepress' ), '<input type="number" id="columns-append-number" class="small-text numbers-only" title="' . __( 'This field must contain a positive number.', 'tablepress' ) . '" value="1" min="1" max="99999" maxlength="5" required />' ); ?>&nbsp;<input type="button" class="button" id="columns-append" value="<?php _e( 'Add', 'tablepress' ); ?>" />
+			<?php printf( __( 'Add %s column(s)', 'tablepress' ), '<input type="number" id="columns-append-number" class="small-text numbers-only" title="' . esc_attr__( 'This field must contain a positive number.', 'tablepress' ) . '" value="1" min="1" max="99999" maxlength="5" required />' ); ?>&nbsp;<input type="button" class="button" id="columns-append" value="<?php esc_attr_e( 'Add', 'tablepress' ); ?>" />
 		</td>
 	</tr>
 </table>
@@ -396,8 +397,8 @@ class TablePress_Edit_View extends TablePress_View {
 		if ( current_user_can( 'tablepress_preview_table', $data['table']['id'] ) )
 			echo '<a href="' . $preview_url . '" class="button button-large show-preview-button" target="_blank">' . __( 'Preview', 'tablepress' ) . '</a>';
 		?>
-			<input type="button" class="button button-primary button-large save-changes-button hide-if-no-js" value="<?php _e( 'Save Changes', 'tablepress' ); ?>" />
-			<input type="submit" class="button button-primary button-large hide-if-js" value="<?php _e( 'Save Changes', 'tablepress' ); ?>" />
+			<input type="button" class="button button-primary button-large save-changes-button hide-if-no-js" value="<?php esc_attr_e( 'Save Changes', 'tablepress' ); ?>" />
+			<input type="submit" class="button button-primary button-large hide-if-js" value="<?php esc_attr_e( 'Save Changes', 'tablepress' ); ?>" />
 		<?php
 		echo '</p>';
 	}
@@ -408,18 +409,21 @@ class TablePress_Edit_View extends TablePress_View {
 	 * @since 1.0.0
 	 */
 	public function textbox_other_actions( $data, $box ) {
-		$user_can_delete_table = current_user_can( 'tablepress_delete_table', $data['table']['id'] );
+		$user_can_copy_table = current_user_can( 'tablepress_copy_table', $data['table']['id'] );
 		$user_can_export_table = current_user_can( 'tablepress_export_table', $data['table']['id'] );
+		$user_can_delete_table = current_user_can( 'tablepress_delete_table', $data['table']['id'] );
 
-		if ( ! $user_can_delete_table && ! $user_can_export_table )
+		if ( ! $user_can_copy_table && ! $user_can_export_table && ! $user_can_delete_table )
 			return;
 
 		echo '<p class="submit">';
-		echo __( 'Other Actions', 'tablepress' ) . ':&nbsp;';
-		if ( $user_can_delete_table )
-			echo '<a href="' . TablePress::url( array( 'action' => 'delete_table', 'item' => $data['table']['id'], 'return' => 'edit', 'return_item' => $data['table']['id'] ), true, 'admin-post.php' ) . '" class="button delete-link">' . __( 'Delete Table', 'tablepress' ) . '</a> ';
+		echo __( 'Other Actions', 'tablepress' ) . ':&nbsp; ';
+		if ( $user_can_copy_table )
+			echo '<a href="' . TablePress::url( array( 'action' => 'copy_table', 'item' => $data['table']['id'], 'return' => 'edit' ), true, 'admin-post.php' ) . '" class="button">' . __( 'Copy Table', 'tablepress' ) . '</a> ';
 		if ( $user_can_export_table )
-			echo '<a href="' . TablePress::url( array( 'action' => 'export', 'table_id' => $data['table']['id'] ) ) . '" class="button">' . __( 'Export Table', 'tablepress' ) . '</a>';
+			echo '<a href="' . TablePress::url( array( 'action' => 'export', 'table_id' => $data['table']['id'] ) ) . '" class="button">' . __( 'Export Table', 'tablepress' ) . '</a> ';
+		if ( $user_can_delete_table )
+			echo '<a href="' . TablePress::url( array( 'action' => 'delete_table', 'item' => $data['table']['id'], 'return' => 'edit', 'return_item' => $data['table']['id'] ), true, 'admin-post.php' ) . '" class="button delete-link">' . __( 'Delete Table', 'tablepress' ) . '</a>';
 		echo '</p>';
 	}
 
@@ -444,7 +448,7 @@ class TablePress_Edit_View extends TablePress_View {
 	?>
 	<div class="submitbox">
 		<a href="#" class="submitdelete" id="advanced-editor-cancel"><?php _e( 'Cancel', 'tablepress' ); ?></a>
-		<input type="button" class="button button-primary button-large" id="advanced-editor-confirm" value="<?php _e( 'OK', 'tablepress' ); ?>" />
+		<input type="button" class="button button-primary button-large" id="advanced-editor-confirm" value="<?php esc_attr_e( 'OK', 'tablepress' ); ?>" />
 	</div>
 	</div>
 </div>
@@ -488,7 +492,7 @@ class TablePress_Edit_View extends TablePress_View {
 			$position_select .= '<option' . selected( 'below', $options['print_name_position'], false ) . ' value="below">' . __( 'below', 'tablepress' ) . '</option>';
 			$position_select .= '</select>';
 		?>
-		<td class="column-2"><input type="checkbox" id="option-print-name" name="table[options][print_name]" value="true"<?php checked( $options['print_name'] ); ?> /> <?php printf( __( 'The table name shall be written %s the table.', 'tablepress' ), $position_select ); ?></td>
+		<td class="column-2"><input type="checkbox" id="option-print-name" name="table[options][print_name]" value="true"<?php checked( $options['print_name'] ); ?> /> <?php printf( __( 'Show the table name %s the table.', 'tablepress' ), $position_select ); ?></td>
 	</tr>
 	<tr class="bottom-border">
 		<th class="column-1" scope="row"><?php _e( 'Print Table Description', 'tablepress' ); ?>:</th>
@@ -498,7 +502,7 @@ class TablePress_Edit_View extends TablePress_View {
 			$position_select .= '<option' . selected( 'below', $options['print_description_position'], false ) . ' value="below">' . __( 'below', 'tablepress' ) . '</option>';
 			$position_select .= '</select>';
 		?>
-		<td class="column-2"><input type="checkbox" id="option-print-description" name="table[options][print_description]" value="true"<?php checked( $options['print_description'] ); ?> /> <?php printf( __( 'The table description shall be written %s the table.', 'tablepress' ), $position_select ); ?></td>
+		<td class="column-2"><input type="checkbox" id="option-print-description" name="table[options][print_description]" value="true"<?php checked( $options['print_description'] ); ?> /> <?php printf( __( 'Show the table description %s the table.', 'tablepress' ), $position_select ); ?></td>
 	</tr>
 	<tr class="top-border">
 		<th class="column-1" scope="row"><?php _e( 'Extra CSS Classes', 'tablepress' ); ?>:</th>
@@ -535,7 +539,7 @@ class TablePress_Edit_View extends TablePress_View {
 	<tr class="no-border">
 		<th class="column-1" scope="row" style="vertical-align: top;"><?php _e( 'Pagination', 'tablepress' ); ?>:</th>
 		<td class="column-2"><label for="option-datatables-paginate"><input type="checkbox" id="option-datatables-paginate" name="table[options][datatables_paginate]" value="true"<?php checked( $options['datatables_paginate'] ); ?> /> <?php _e( 'Enable pagination of the table (viewing only a certain number of rows at a time) by the visitor.', 'tablepress' ); ?></label><br />
-		<label for="option-datatables-paginate_entries"><input type="checkbox" style="visibility: hidden;" <?php // Dummy checkbox for space alignment ?>/> <?php printf( __( 'Show %s rows per page.', 'tablepress' ), '<input type="number" id="option-datatables-paginate_entries" name="table[options][datatables_paginate_entries]" value="' . $options['datatables_paginate_entries'] . '" min="1" max="99999" maxlength="5" required />' ); ?></label></td>
+		<label for="option-datatables-paginate_entries"><input type="checkbox" style="visibility: hidden;" <?php // Dummy checkbox for space alignment ?>/> <?php printf( __( 'Show %s rows per page.', 'tablepress' ), '<input type="number" id="option-datatables-paginate_entries" name="table[options][datatables_paginate_entries]" value="' . intval( $options['datatables_paginate_entries'] ) . '" min="1" max="99999" maxlength="5" required />' ); ?></label></td>
 	</tr>
 	<tr class="no-border">
 		<th class="column-1" scope="row"><?php _e( 'Pagination Length Change', 'tablepress' ); ?>:</th>
@@ -573,18 +577,9 @@ class TablePress_Edit_View extends TablePress_View {
 		<?php _e( 'For example, you can insert things like text, images, or links into the table, or change the used table features. You can also insert, delete, move, hide, and swap columns and rows.', 'tablepress' ); ?>
 	</p>
 	<p>
-		<?php printf( __( 'To insert the table into a page, post, or text widget, copy the Shortcode %s and paste it at the desired place in the editor.', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="[' . TablePress::$shortcode . ' id=' . esc_attr( $data['table']['id'] ) . ' /]" readonly="readonly" />' ); ?>
+		<?php printf( __( 'To insert the table into a page, post, or text widget, copy the Shortcode %s and paste it at the desired place in the editor.', 'tablepress' ), '<input type="text" class="table-shortcode table-shortcode-inline" value="' . esc_attr( '[' . TablePress::$shortcode . " id={$data['table']['id']} /]" ) . '" readonly="readonly" />' ); ?>
 	</p>
 		<?php
-	}
-
-	/**
-	 * Return the content for the help tab for this screen
-	 *
-	 * @since 1.0.0
-	 */
-	protected function help_tab_content() {
-		return 'Help for the Edit Table screen';
 	}
 
 	/**

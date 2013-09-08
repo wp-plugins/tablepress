@@ -22,6 +22,15 @@ with modifications by Petr Skoda (skodak) from Moodle - http://moodle.org/
 
 additional modifications by Tobias Bäthge:
 - changed get_string() to MoodleTranslations::get_string(), which is a custom localization from Moodle
+- allow comparisons (x>4, x=5, etc.)
+- use array_sum() instead of loop in EvalMathFuncs::sum()
+- add "product()" function
+- add "mean()" alias for "average()"
+- add "atan2()" and "arctan2()" alias
+- add "median()", "mode()", and "range()" statistic functions
+- add "if()" function
+- add "number_format()" and "number_format_eu()" functions
+- Fix displaying of expected number of arguments
 
 ================================================================================
 
@@ -138,8 +147,14 @@ class MoodleTranslations {
 						continue;
 					}
 					if (is_object($value) or is_array($value)) {
-						// we support just string as value
-						continue;
+						$value = (array)$value;
+						if ( count( $value ) > 1 ) {
+							$value = implode( ' or ', $value );
+						} else {
+							$value = (string)$value[0];
+							if ( '-1' == $value )
+								$value = 'at least 1';
+						}
 					}
 					$search[]  = '{$a->'.$key.'}';
 					$replace[] = (string)$value;
@@ -171,13 +186,21 @@ class EvalMath {
 		'sin','sinh','arcsin','asin','arcsinh','asinh',
 		'cos','cosh','arccos','acos','arccosh','acosh',
 		'tan','tanh','arctan','atan','arctanh','atanh',
-		'sqrt','abs','ln','log','exp','floor','ceil');
+		'sqrt','abs','ln','log','exp','floor','ceil'
+	);
 
 	var $fc = array( // calc functions emulation
-		'average'=>array(-1), 'max'=>array(-1),	 'min'=>array(-1),
+		'average'=>array(-1), 'mean'=>array(-1),
+		'median'=>array(-1),  'mode'=>array(-1), 'range'=>array(-1),
+		'max'=>array(-1),	  'min'=>array(-1),
 		'mod'=>array(2),	  'pi'=>array(0),	 'power'=>array(2),
-		'round'=>array(1, 2), 'sum'=>array(-1), 'rand_int'=>array(2),
-		'rand_float'=>array(0));
+		'round'=>array(1, 2),
+		'number_format'=>array(1, 2), 'number_format_eu'=>array(1, 2),
+		'sum'=>array(-1),	 'product'=>array(-1),
+		'rand_int'=>array(2), 'rand_float'=>array(0),
+		'arctan2'=>array(2),  'atan2'=>array(2),
+		'if'=>array(3)
+	);
 
 	var $allowimplicitmultiplication;
 
@@ -262,14 +285,14 @@ class EvalMath {
 		$output = array(); // postfix form of expression, to be passed to pfx()
 		$expr = trim(strtolower($expr));
 
-		$ops   = array('+', '-', '*', '/', '^', '_');
-		$ops_r = array('+'=>0,'-'=>0,'*'=>0,'/'=>0,'^'=>1); // right-associative operator?
-		$ops_p = array('+'=>0,'-'=>0,'*'=>1,'/'=>1,'_'=>1,'^'=>2); // operator precedence
+		$ops   = array('+', '-', '*', '/', '^', '_', '>', '<', '=');
+		$ops_r = array('+'=>0,'-'=>0,'*'=>0,'/'=>0,'^'=>1,'>'=>0,'<'=>0,'='=>0); // right-associative operator?
+		$ops_p = array('+'=>0,'-'=>0,'*'=>1,'/'=>1,'_'=>1,'^'=>2,'>'=>0,'<'=>0,'='=>0); // operator precedence
 
 		$expecting_op = false; // we use this in syntax-checking the expression
 							   // and determining when a - is a negation
 
-		if (preg_match("/[^\w\s+*^\/()\.,-]/", $expr, $matches)) { // make sure the characters are all good
+		if (preg_match("/[^\w\s+*^\/()\.,-<>=]/", $expr, $matches)) { // make sure the characters are all good
 			return $this->trigger(MoodleTranslations::get_string('illegalcharactergeneral', 'mathslib', $matches[0]));
 		}
 
@@ -385,10 +408,13 @@ class EvalMath {
 					$stack->pop();// 1
 					$fn = $stack->pop();
 					$fnn = $matches[1]; // get the function name
-					$counts = $this->fc[$fnn];
+					if ( isset( $this->fc[$fnn] ) )
+						$counts = $this->fc[$fnn]; // custom function
+					else
+						$counts = array(1); // default count for built-in functions
 					if (!in_array(0, $counts)){
 						$a= new stdClass();
-						$a->expected = $this->fc[$fnn];
+						$a->expected = $counts;
 						$a->given = 0;
 						return $this->trigger(MoodleTranslations::get_string('wrongnumberofarguments', 'mathslib', $a));
 					}
@@ -447,6 +473,9 @@ class EvalMath {
 					for ($i = $count-1; $i >= 0; $i--) {
 						if (is_null($args[] = $stack->pop())) return $this->trigger(MoodleTranslations::get_string('internalerror', 'mathslib'));
 					}
+					if ($fnn == 'if') $fnn = 'func_if';
+					elseif ($fnn == 'mean') $fnn = 'average';
+					elseif ($fnn == 'arctan2') $fnn = 'atan2';
 					$res = call_user_func_array(array('EvalMathFuncs', $fnn), array_reverse($args));
 					if ($res === FALSE) {
 						return $this->trigger(MoodleTranslations::get_string('internalerror', 'mathslib'));
@@ -461,7 +490,7 @@ class EvalMath {
 					$stack->push($this->pfx($this->f[$fnn]['func'], $args)); // yay... recursion!!!!
 				}
 			// if the token is a binary operator, pop two values off the stack, do the operation, and push the result back on
-			} elseif (in_array($token, array('+', '-', '*', '/', '^'), true)) {
+			} elseif (in_array($token, array('+', '-', '*', '/', '^', '>', '<', '='), true)) {
 				if (is_null($op2 = $stack->pop())) return $this->trigger(MoodleTranslations::get_string('internalerror', 'mathslib'));
 				if (is_null($op1 = $stack->pop())) return $this->trigger(MoodleTranslations::get_string('internalerror', 'mathslib'));
 				switch ($token) {
@@ -476,6 +505,12 @@ class EvalMath {
 						$stack->push($op1/$op2); break;
 					case '^':
 						$stack->push(pow($op1, $op2)); break;
+					case '>':
+						$stack->push((int)($op1 > $op2)); break;
+					case '<':
+						$stack->push((int)($op1 < $op2)); break;
+					case '=':
+						$stack->push((int)($op1 == $op2)); break;
 				}
 			// if the token is a unary operator, pop one value off the stack, do the operation, and push it back on
 			} elseif ($token == "_") {
@@ -538,9 +573,34 @@ class EvalMathStack {
 // spreadsheet functions emulation
 class EvalMathFuncs {
 
+	static function func_if( $condition, $then, $else ) { // "if" is not a valid function name, so prefix it
+		return ( (bool)$condition ? $then : $else );
+	}
+
 	static function average() {
 		$args = func_get_args();
 		return (call_user_func_array(array('self', 'sum'), $args) / count($args));
+	}
+
+	static function median() {
+		$args = func_get_args();
+		sort( $args );
+		$middle = floor( count( $args ) / 2 ); // upper median for even counts
+        return $args[ $middle ];
+	}
+
+	static function mode() {
+		$args = func_get_args();
+		$v = array_count_values( $args );
+        asort( $v );
+        end( $v );
+        return key( $v );
+    }
+
+	static function range() {
+		$args = func_get_args();
+        sort( $args );
+		return end( $args ) - reset( $args );
 	}
 
 	static function max() {
@@ -577,17 +637,27 @@ class EvalMathFuncs {
 		return pow($op1, $op2);
 	}
 
+	static function atan2($op1, $op2) {
+		return atan2($op1, $op2);
+	}
+
 	static function round($val, $precision = 0) {
 		return round($val, $precision);
 	}
 
+	static function number_format($val, $decimals = 0) {
+		return number_format($val, $decimals, '.', ',');
+	}
+	static function number_format_eu($val, $decimals = 0) {
+		return number_format($val, $decimals, ',', ' ');
+	}
+
 	static function sum() {
-		$args = func_get_args();
-		$res = 0;
-		foreach($args as $a) {
-		   $res += $a;
-		}
-		return $res;
+		return array_sum( func_get_args() );
+	}
+
+	static function product() {
+		return array_product( func_get_args() );
 	}
 
 	protected static $randomseed = null;
