@@ -4,7 +4,7 @@ Donate link: http://tablepress.org/donate/
 Tags: html,table,data,editor,csv,excel,import,export
 Requires at least: 3.5
 Tested up to: 3.7-alpha
-Stable tag: 1.1
+Stable tag: 1.0
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
